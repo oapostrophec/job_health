@@ -19,12 +19,19 @@ source('get_country_data.R')
 source('get_channel_data.R')
 #source('get_worker_data.R')
 source('get_workset_data.R')
+source('db_call_function.R')
+source('run_this_query_function.R')
+source('work_available_query_function.R')
 
-system('mkdir -p /tmp/job_health')
+temp_dir = "/tmp/job_health"
+
+system(paste('mkdir -p',temp_dir))
 
 options(stringsAsFactors = F)
 options(shiny.maxRequestSize=150*1024^2)
 options(scipen=999)
+
+db_call = db_call(connection_file = "builder_readonly")
 
 shinyServer(function(input, output){
   
@@ -178,6 +185,43 @@ shinyServer(function(input, output){
       }else{
         table = pull_workset_data()
         table
+      } 
+    }
+    
+  })
+  
+  pull_work_available <- reactive({
+    if(input$get_job == 0){
+      return(NULL)
+    }else{
+      job_id = input$job_id
+      if(job_id == 0){
+        return(NULL)
+      }else{
+        db = db_call
+        query = work_available_query()
+        file = paste0(temp_dir,"/",
+          "work_available", "_",
+                      format(Sys.time(), "%b_%d_%X_%Y"),
+                      ".csv")
+        data = run_this_query(db, query, file)
+        print(head(data))
+        data
+      } 
+    }
+  })
+  
+  output$numJobsAvailable <-  renderTable({
+    if(input$get_job == 0){
+      return(NULL)
+    }else{
+      job_id = input$job_id
+      if(job_id == 0){
+        return(NULL)
+      }else{
+        table = pull_work_available()
+        print(summary(table))
+        head(table)
       } 
     }
     
