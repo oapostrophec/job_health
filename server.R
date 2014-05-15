@@ -15,7 +15,7 @@ library('rjson')
 
 source('get_job_data.R')
 #source('get_judgment_data.R')
-#source('get_country_data.R')
+source('get_country_data.R')
 source('get_channel_data.R')
 #source('get_worker_data.R')
 source('get_workset_data.R')
@@ -79,6 +79,20 @@ shinyServer(function(input, output){
     }
   })
   
+  pull_country_data <- reactive({
+    if(input$get_job == 0){
+      return(NULL)
+      #}else if(input$get_job != 0){
+    }else{
+      job_id = input$job_id
+      if(job_id == 0){
+        return(NULL)
+      }else{
+        data = get_country_data(job_id) 
+      }
+    } 
+  })
+  
   pull_job_data <- reactive({
     #if(input$get_job == 0 && input$get_email == 0){
     if(input$get_job == 0){
@@ -94,6 +108,35 @@ shinyServer(function(input, output){
         data
       }
     }
+  })
+  
+  get_skill_names <- reactive({
+    if(input$get_job == 0){
+      return(NULL)
+    }else{
+     skills_data = pull_job_data()
+     min_require = skills_data$minimum_requirements
+     skills_strip = str_replace_all(min_require, "(\\{skill_scores:\\{|\\}.+)", "") 
+     skills_simple = str_replace_all(skills_strip, "(:\\d)", "")
+     skill_split = str_split(skills_simple, ",")
+     skill_unlist = unlist(skill_split[[1]])
+     skill_unlist = skill_unlist[skill_unlist!=""]
+     skills_for_psql = paste(paste0("'",skill_unlist,"'"), collapse=",")
+     skills_for_psql
+    }
+  })
+  
+  get_skill_score <- reactive({
+    if(input$get_job == 0){
+      return(NULL)
+    }else{
+      skills_data = pull_job_data()
+      min_require = skills_data$minimum_requirements
+      score = str_extract(min_require, "(min_score:\\d)")
+      score_num = str_extract(score, "\\d")
+      score_num = as.double(score_num)
+      score_num
+    } 
   })
   
   output$jobData <- renderTable({
