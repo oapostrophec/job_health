@@ -18,6 +18,7 @@ source('get_job_data.R')
 #source('get_country_data.R')
 source('get_channel_data.R')
 #source('get_worker_data.R')
+source('get_workset_data.R')
 
 system('mkdir -p /tmp/job_health')
 
@@ -107,6 +108,36 @@ shinyServer(function(input, output){
         table
       } 
     }
+  })
+  
+  pull_workset_data <- reactive({
+    if(input$get_job == 0){
+      return(NULL)
+    }else{
+      job_id = input$job_id
+      if(job_id == 0){
+        return(NULL)
+      }else{
+        data = get_workset_data(job_id)
+        print(head(data))
+        data
+      } 
+    }
+  })
+  
+  output$worksetData <- renderTable({
+    if(input$get_job == 0){
+      return(NULL)
+    }else{
+      job_id = input$job_id
+      if(job_id == 0){
+        return(NULL)
+      }else{
+        table = pull_workset_data()
+        table
+      } 
+    }
+    
   })
   
 })

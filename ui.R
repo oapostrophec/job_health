@@ -22,7 +22,8 @@ shinyUI(pageWithSidebar(
     tabPanel("Throughput Analysis",
              tableOutput("channelData"),
              tableOutput("jobData")),
-    tabPanel("Quality Analysis"),
+    tabPanel("Quality Analysis",
+             tableOutput("worksetData")),
     tabPanel("Detected Job Flaws")
   ))
 ))
