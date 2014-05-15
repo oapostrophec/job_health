@@ -22,6 +22,7 @@ source('get_workset_data.R')
 source('db_call_function.R')
 source('run_this_query_function.R')
 source('work_available_query_function.R')
+source('payrate_satisfaction_query_function.R')
 
 temp_dir = "/tmp/job_health"
 
@@ -184,4 +185,40 @@ shinyServer(function(input, output){
     
   })
   
+  pull_payrate_satisfaction <- reactive({
+    if(input$get_job == 0){
+      return(NULL)
+    }else{
+      job_id = input$job_id
+      if(job_id == 0){
+        return(NULL)
+      } else {
+        db = db_call
+        query = payrate_satisfaction_query(job_id)
+        file = paste0(temp_dir,"/",
+                      "payrate_satisfaction", "_",
+                      format(Sys.time(), "%b_%d_%X_%Y"),
+                      ".csv")
+        data = run_this_query(db, query, file)
+        print(head(data))
+        data
+      } 
+    }
+  })
+  
+  output$payrateSatisfaction <-  renderTable({
+    if(input$get_job == 0){
+      return(NULL)
+    }else{
+      job_id = input$job_id
+      if(job_id == 0){
+        return(NULL)
+      }else{
+        table = pull_payrate_satisfaction()
+        print(summary(table))
+        head(table)
+      } 
+    }
+    
+  })
 })
