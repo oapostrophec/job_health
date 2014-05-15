@@ -22,7 +22,8 @@ shinyUI(pageWithSidebar(
     tabPanel("Throughput Analysis",
              tableOutput("channelData"),
              tableOutput("jobData"),
-             tableOutput("numJobsAvailable")
+             tableOutput("numJobsAvailable"),
+             tableOutput("payrateSatisfaction")
              ),
     tabPanel("Quality Analysis",
              tableOutput("worksetData")),
