@@ -72,7 +72,13 @@ shinyServer(function(input, output){
       if(job_id == 0){
         return(NULL)
       }else{
-        data = get_channel_data(job_id) 
+        db = db_call
+        query = get_channel_data(job_id) 
+        file = paste0(temp_dir,"/",
+                      "job_channel_", job_id, "_",
+                      format(Sys.time(), "%b_%d_%X_%Y"),
+                      ".csv")
+        data = run_this_query(db, query, file)
       }
     } 
   })
@@ -96,7 +102,13 @@ shinyServer(function(input, output){
       if(job_id == 0){
         return(NULL)
       }else{
-        data = get_country_data(job_id) 
+        db = db_call
+        query = get_country_data(job_id) 
+        file = paste0(temp_dir,"/",
+                      "job_country_", job_id, "_",
+                      format(Sys.time(), "%b_%d_%X_%Y"),
+                      ".csv")
+        data = run_this_query(db, query, file)
       }
     } 
   })
@@ -111,9 +123,14 @@ shinyServer(function(input, output){
       if(job_id == 0){
         return(NULL)
       }else{
-        data = get_job_data(job_id) 
-        print(head(data))
-        data
+        db = db_call
+        query = get_job_data(job_id) 
+        file = paste0(temp_dir,"/",
+                      "job_data_", job_id, "_",
+                      format(Sys.time(), "%b_%d_%X_%Y"),
+                      ".csv")
+        data = run_this_query(db, query, file)
+        
       }
     }
   })
@@ -169,9 +186,13 @@ shinyServer(function(input, output){
       if(job_id == 0){
         return(NULL)
       }else{
-        data = get_workset_data(job_id)
-        print(head(data))
-        data
+        db = db_call
+        query = get_workset_data(job_id)
+        file = paste0(temp_dir,"/",
+                      "job_workset_data_", job_id, "_",
+                      format(Sys.time(), "%b_%d_%X_%Y"),
+                      ".csv")
+        data = run_this_query(db, query, file)
       } 
     }
   })
