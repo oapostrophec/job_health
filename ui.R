@@ -20,10 +20,17 @@ shinyUI(pageWithSidebar(
     htmlOutput("accountSummary")),
   mainPanel(tabsetPanel(
     tabPanel("Throughput Analysis",
-             tableOutput("channelData"),
-             tableOutput("jobData"),
-             tableOutput("numJobsAvailable"),
-             tableOutput("payrateSatisfaction")
+             div(h4("Alerts"), 
+                 HTML('<ul>
+                       <li>Alert for Small Worker Pool</li>
+                       <li>Low Pay Alert</li>
+                       <li>Lost &amp; Stopped Work Alert</li>
+                       </ul>'), class="span6 well"),
+             div(h4("Bar Charts here for available workers & current worker breakdowns"), class="span5")
+             #tableOutput("channelData"),
+             #tableOutput("jobData"),
+             #tableOutput("numJobsAvailable"),
+             #tableOutput("payrateSatisfaction")
              ),
     tabPanel("Quality Analysis",
              tableOutput("worksetData")),
