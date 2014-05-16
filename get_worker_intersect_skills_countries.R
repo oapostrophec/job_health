@@ -9,7 +9,7 @@ get_worker_intersect_skills_countries <- function(skills, skill_score, countries
   begin = paste(start, where_active)
   
   if(length(countries_format) > 0){
-    if(data_country$excluded[1] == "t"){
+    if(countries$excluded[1] == "t"){
       select_countries = paste('and NOT country IN (', countries_format,') ')
     } else {
       select_countries = paste('and country IN (', countries_format,') ')
@@ -39,7 +39,7 @@ get_worker_intersect_skills_countries <- function(skills, skill_score, countries
   } else if (length(countries_format) == 0 && length(skills) > 0){
     command=paste(begin, skill_query, end)
   } else {
-    command=paste(end)
+    command=paste(begin,end)
   }
   
   return(command)
