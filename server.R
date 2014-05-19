@@ -47,16 +47,6 @@ shinyServer(function(input, output){
     paste(html_image)
   }) 
   
-  output$jobSummary <- renderText({
-    #if(input$get_job == 0 && input$get_email == 0){
-    if(input$get_job ==0){
-      return(NULL)
-    }else{
-      output="Job Summary Info Here:"
-    }
-    
-  })
-  
   output$accountSummary <- renderText({
     #if(input$get_job == 0 && input$get_email == 0){
     if(input$get_job == 0){
@@ -132,26 +122,19 @@ shinyServer(function(input, output){
         return(NULL)
       }else{
         print("in pull_workset_data")
-        data = get_workset_data(job_id)
+        db = db_call
+        query = get_workset_data(job_id)
+        file = paste0(temp_dir,"/",
+                      "workset", "_", job_id, "_",
+                      format(Sys.time(), "%b_%d_%X_%Y"),
+                      ".csv")
+        data = run_this_query(db, query, file)
+        print("Workset server Line 132")
+        print(names(data))
         print(head(data))
         data
       } 
     }
-  })
-  
-  output$worksetData <- renderTable({
-    if(input$get_job == 0){
-      return(NULL)
-    }else{
-      job_id = input$job_id
-      if (job_id == 0) {
-        return(NULL)
-      }else{
-        table = pull_workset_data()
-        table
-      } 
-    }
-    
   })
   
   pull_work_available <- reactive({
@@ -475,6 +458,50 @@ shinyServer(function(input, output){
     }
   })
   
+  output$job_summary_message <- renderText({
+    if (input$get_job == 0 || input$job_id == 0) {
+      # User has not uploaded a file yet
+      return("<p>No job data to return.</p>")
+    } else {
+      #Data to grab
+      json = get_job_settings_from_json()
+      workset = pull_workset_data()
+      workset = as.data.frame(workset)
+      
+      
+      #Variables to Display
+      job_title = json$title 
+      job_state = json$state
+      support_email = json$support_email
+      num_gold_units = json$golds_count
+      num_nongold_units = json$units_count - json$golds_count
+      
+      total_judgments = sum(workset$judgments_count)
+      
+      untrusted_judgments = 
+        sum(worksets$judgments_count[worksets$tainted == "t"])
+      trusted_judgments = total_judgments - untrusted_judgments
+      
+      if (num_gold_units == 0) {
+        gold_message = "<p style='color:red;'>It looks like there are NOT any <b>TQs</b> in this job. Unless this is a survey job or a doublepass job, they should use test questions."
+      } else {
+        gold_message = ""
+      }
+      
+      overall_message = paste("<h5>Job Summary</h5>",
+                              "<ul class=\"unstyled\"><li>Job Title:<br>", job_title, "</li><br>",
+                              "<li>State:", job_state, "</li>",
+                              "<li>Email:", support_email, "</li>",
+                              "<li>Units:", num_nongold_units, "</li>",
+                              "<li>Test Questions:", num_gold_units, "</li><br>",
+                              "<li>Total Judgments:", total_judgments, "</li>",
+                              "<li>Untrusted Judgments:", untrusted_judgments, "</li>",
+                              "<li>Trusted Judgments:", trusted_judgments, "</li>",
+                              "</ul>", sep="")
+      
+      paste(overall_message, gold_message)
+    } 
+  })
   
   
 })
