@@ -422,6 +422,8 @@ shinyServer(function(input, output){
       # User has not uploaded a file yet
       return(NULL)
     } else {
+      line1 = "<div class=\"bar_divs\" id=\"maxed_out_div\" style=\"display: none;\">"
+      title ="<h4>Maxed Out</h4>"
       num_maxed_out = get_num_maxed_out()
       max_setting = get_max_setting()
       max_setting_correct = get_max_setting_correct()
@@ -453,7 +455,9 @@ shinyServer(function(input, output){
         response ="Something weird has happened. We've got nothing to say."
       }
       last_line = paste(rec_line,response)
-      summary = paste(overview, comment, max_work_line, max_possible_line, last_line, sep="<br>")
+      closing_div = "</div>"
+      summary = paste(line1, title, overview, comment, max_work_line, 
+                      max_possible_line, last_line, closing_div, sep="<br>")
       paste(summary)
     }
   })

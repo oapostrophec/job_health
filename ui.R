@@ -42,7 +42,7 @@ shinyUI(pageWithSidebar(
                tags$h4("Drill down for Maxed Out"),
                textOutput("maxed_out_summary")
                ),
-             div(h4("Drill down for Working"), class="bar_divs", id="working_div", style="display:none"),
+             #div(h4("Drill down for Working"), class="bar_divs", id="working_div", style="display:none"),
              div(h4("Drill down for Tainted"), class="bar_divs", id="tainted_div", style="display:none"),
              div(h4("Drill down for Chacked Out"), class="bar_divs", id="checked_out_div", style="display:none"),
              div(h4("Drill down for Not In Yet"), class="bar_divs", id="not_in_yet_div", style="display:none")
