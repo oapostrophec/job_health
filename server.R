@@ -483,7 +483,7 @@ shinyServer(function(input, output){
       total_judgments = sum(workset$judgments_count)
       
       untrusted_judgments = 
-        sum(worksets$judgments_count[worksets$tainted == "t"])
+        sum(workset$judgments_count[workset$tainted == "t"])
       trusted_judgments = total_judgments - untrusted_judgments
       
       if (num_gold_units == 0) {
