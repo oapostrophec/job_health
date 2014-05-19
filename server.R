@@ -132,7 +132,15 @@ shinyServer(function(input, output){
         return(NULL)
       }else{
         print("in pull_workset_data")
-        data = get_workset_data(job_id)
+        db = db_call
+        query = get_workset_data(job_id)
+        file = paste0(temp_dir,"/",
+                      "workset", "_", job_id, "_",
+                      format(Sys.time(), "%b_%d_%X_%Y"),
+                      ".csv")
+        data = run_this_query(db, query, file)
+        print("Workset server Line 132")
+        print(names(data))
         print(head(data))
         data
       } 
@@ -523,5 +531,6 @@ shinyServer(function(input, output){
       paste(summary)
       }
     })
+  
   
 })
