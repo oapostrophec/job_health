@@ -38,8 +38,11 @@ shinyUI(pageWithSidebar(
              tableOutput("worksetData")),
     tabPanel("Detected Job Flaws",
              showOutput("throughput_bar", "highcharts"),
-             div(h4("Div for the first column"), class="span5", id="first_div", style="display:none"),
-             div(h4("Div for the first column"), class="span5", id="second_div", style="display:none")
+             div(h4("Drill down for Maxed Out"), class="bar_divs", id="maxed_out_div", style="display:none"),
+             div(h4("Drill down for Working"), class="bar_divs", id="working_div", style="display:none"),
+             div(h4("Drill down for Tainted"), class="bar_divs", id="tainted_div", style="display:none"),
+             div(h4("Drill down for Chacked Out"), class="bar_divs", id="checked_out_div", style="display:none"),
+             div(h4("Drill down for Not In Yet"), class="bar_divs", id="not_in_yet_div", style="display:none")
     )
   )
   )

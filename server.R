@@ -286,7 +286,7 @@ shinyServer(function(input, output){
       return(NULL)
     } else {
       responses_table_transformed = data.frame(group=c("maxed out", "working",
-                                                       "tainted","checked out", "not_in_yet"),
+                                                       "tainted","checked_out", "not_in_yet"),
                                                y = c(12,34,32,45,50), # these are the numbers found in groups
                                                x=rep("",times=5), # this is a fake grouping variable
                                                preserve_order = c(5,4,3,2,1),
@@ -295,11 +295,11 @@ shinyServer(function(input, output){
                                                         "FAIL",
                                                         "Never even started. <u>underline</u>",
                                                         "Are they even real?"), # this is a vector of html vars describing tooltips
-                                               click_action = c("first_div",
-                                                                "second_div",
-                                                                "alert('You just clicked the graph');",
-                                                                "http://rcharts.io/viewer/?5735146#.U3lpH61dVah",
-                                                                "http://rcharts.io/viewer/?5735146#.U3lpH61dVah") # now this is the trickiest part - we'll have to figure out shiny interactions
+                                               click_action = c("maxed_out_div",
+                                                                "working_div",
+                                                                "tainted_div",
+                                                                "checked_out_div",
+                                                                "not_in_yet_div") # now this is the trickiest part - we'll have to figure out shiny interactions
                                                # these will open links for now
       )
       
@@ -328,7 +328,12 @@ shinyServer(function(input, output){
             # click = "#! function() { alert('You just clicked the graph'); } !#") # simplest test
             # this.options.data[0] then column name to access data
             # click = "#! function() { window.open(this.options.data[0].click_action); } !#")
-            click = "#! function() { document.getElementById(this.options.data[0].click_action).style.display='block'; } !#")
+            click = "#! function() { 
+            var my_divs = document.getElementsByClassName('bar_divs');
+            for (var i = 0; i < my_divs.length; i++) {
+              my_divs[i].style.display= 'none';
+            }
+            document.getElementById(this.options.data[0].click_action).style.display='block'; } !#")
         )
       )
       
