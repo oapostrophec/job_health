@@ -20,6 +20,13 @@ shinyUI(pageWithSidebar(
     htmlOutput("accountSummary")),
   mainPanel(tabsetPanel(
     tabPanel("Throughput Analysis",
+<<<<<<< HEAD
+             tableOutput("channelData"),
+             tableOutput("jobData"),
+             tableOutput("numJobsAvailable"),
+             tableOutput("payrateSatisfaction"),
+             tableOutput("dropoutRate")
+=======
              div(h4("Alerts"), 
                  HTML('<ul>
                        <li>Alert for Small Worker Pool</li>
@@ -28,19 +35,16 @@ shinyUI(pageWithSidebar(
                        </ul>'), class="span6 well"),
              div(h4("Bar Charts here for available workers & current worker breakdowns"), class="span5")
              #tableOutput("channelData"),
-             #tableOutput("worksetData"),
-             #,
+             #tableOutput("jobData"),
              #tableOutput("numJobsAvailable"),
              #tableOutput("payrateSatisfaction")
-             #tableOutput("five_num_worker_table")
-    ),
+>>>>>>> 0741ef47909eb160310cb358201a8ec764f140c5
+             ),
     tabPanel("Quality Analysis",
              tableOutput("worksetData")),
-    tabPanel("Detected Job Flaws",
-             showOutput("throughput_bar", "highcharts"),
-             div(h4("Div for the first column"), class="span5", id="first_div", style="display:none"),
-             div(h4("Div for the first column"), class="span5", id="second_div", style="display:none")
-    )
-  )
-  )
+    tabPanel("Detected Job Flaws")
+  ))
 ))
+
+
+
