@@ -35,6 +35,8 @@ options(stringsAsFactors = F)
 options(shiny.maxRequestSize=150*1024^2)
 options(scipen=999)
 
+auth_key = "5b7d73e5e7eb06556f12b45f87b013fc419f45f2"
+
 db_call = db_call(connection_file = "builder_readonly")
 
 shinyServer(function(input, output){
@@ -290,7 +292,7 @@ shinyServer(function(input, output){
                                                y = c(12,34,32,45,50), # these are the numbers found in groups
                                                x=rep("",times=5), # this is a fake grouping variable
                                                preserve_order = c(5,4,3,2,1),
-                                               info = c("<b>ALL DONE</b>",
+                                               info = c("<b>Maxed Out</b><br>Count: 12<br>Max work set to: max work<br>Max work according to # Golds: max golds",
                                                         "Could still be <b>working</b> for all we know",
                                                         "FAIL",
                                                         "Never even started. <u>underline</u>",
@@ -328,6 +330,8 @@ shinyServer(function(input, output){
             # click = "#! function() { alert('You just clicked the graph'); } !#") # simplest test
             # this.options.data[0] then column name to access data
             # click = "#! function() { window.open(this.options.data[0].click_action); } !#")
+            #
+            # hide all elements, then show the one corresponding to the bar
             click = "#! function() { 
             var my_divs = document.getElementsByClassName('bar_divs');
             for (var i = 0; i < my_divs.length; i++) {
@@ -346,6 +350,129 @@ shinyServer(function(input, output){
       
     }
     
+  })
+  
+  get_job_settings_from_json <- reactive({
+    if (input$get_job == 0 || input$job_id == 0) {
+      # User has not uploaded a file yet
+      return(NULL)
+    } else {
+      command = paste0("curl https://api.crowdflower.com/v1/jobs/",
+                       input$job_id,
+                       ".json?key=",
+                       auth_key)
+      json_get = paste(system(command, intern=T), collapse="")
+      parsed_json = fromJSON(json_str = json_get)
+      return(parsed_json)
+    }
+  })
+  
+  get_max_setting_correct <- reactive({
+    if (input$get_job == 0 || input$job_id == 0) {
+      # User has not uploaded a file yet
+      return(NULL)
+    } else {
+      
+      
+    }
+  })
+  
+  get_max_setting <- reactive({
+    if (input$get_job == 0 || input$job_id == 0) {
+      # User has not uploaded a file yet
+      return(NULL)
+    } else {
+      if (is.null(get_job_settings_from_json()$max_judgments_per_worker) && 
+            is.null(get_job_settings_from_json()$max_judgments_per_ip)) {
+        this_max = Inf
+      } else {
+        this_max = min(get_job_settings_from_json()$max_judgments_per_worker,
+                       get_job_settings_from_json()$max_judgments_per_ip)
+      }
+      return(this_max)
+    }
+  })
+  
+  
+  get_max_setting_correct <- reactive({
+    if (input$get_job == 0 || input$job_id == 0) {
+      # User has not uploaded a file yet
+      return(NULL)
+    } else {
+      job_json = get_job_settings_from_json()
+      print(job_json)
+      num_golds = as.numeric(job_json$golds_count) # TODO for now, just pull the setting. get real number later
+      units_per_task = as.numeric(job_json$units_per_assignment)
+      gold_per_task = as.numeric(job_json$gold_per_assignment)
+      golds_in_quiz_mode = as.numeric(job_json$options$after_gold)
+      print(class(golds_in_quiz_mode))
+      if (gold_per_task > 0) {
+        max_correct = floor(((num_golds-golds_in_quiz_mode) / gold_per_task * units_per_task))
+      } else {
+        max_correct = Inf
+      }
+      return(max_correct)
+    }
+  })
+  
+  get_num_maxed_out <- renderText({
+    if (input$get_job == 0 || input$job_id == 0) {
+      # User has not uploaded a file yet
+      return(NULL)
+    } else {
+      return(12)
+    }
+  })
+  
+  output$maxed_out_summary <- renderText({
+    if (input$get_job == 0) {
+      # User has not uploaded a file yet
+      return(NULL)
+    } else {
+      string = "123"
+      paste(string)
+    }
+  })
+  
+  output$maxed_out_summary1 <- renderText({
+    if (input$get_job == 0) {
+      # User has not uploaded a file yet
+      return(NULL)
+    } else {
+      num_maxed_out = get_num_maxed_out()
+      max_setting = get_max_setting()
+      max_setting_correct = get_max_setting_correct()
+      overview = paste0(num_maxed_out," workers have maxed out")
+      comment = "(This means that they cannot do any more work)"
+      max_work_line = paste("Max work per worker is set to:",max_setting)
+      max_possible_line = paste("This job's params would allow for a work limit of:",max_setting_correct)
+      rec_line = "The gist is:"
+      if (max_setting == Inf) {
+        if (max_setting_correct == Inf) {
+          reponse = "There are no Test Questions in this job. 
+        Technically, workers can work as much as they want to. 
+        We'd recommend setting a reasonable max work limit."
+        } else  {
+          response = paste("Max work limit is nto set. This is not good news.
+          Set the limit to",max_setting_correct,"or lower.")
+        }
+      } else if (max_setting_correct == Inf) {
+        reponse = "There are no Test Questions in this job. 
+        Technically, workers can work as much as they want to. 
+        We'd recommend setting a reasonable max work limit."
+      } else if (max_setting_correct <= max_setting) {
+        response = paste("The work limit is set too high! Set it to <b>", max_setting_correct, "</b>or lower immediately")
+      } else if (max_setting_correct > max_setting) {
+        response = paste("The work limit can be safely increased to <b>", 
+                         max_setting_correct,
+                         "</b>.")
+      } else {
+        response ="Something weird has happened. We've got nothing to say."
+      }
+      last_line = paste(rec_line,response)
+      summary = paste(overview, comment, max_work_line, max_possible_line, last_line, sep="<br>")
+      paste(summary)
+    }
   })
   
   
