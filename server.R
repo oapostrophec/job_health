@@ -448,7 +448,7 @@ shinyServer(function(input, output){
       comment = "(This means that they cannot do any more work)"
       max_work_line = paste("Max work per worker is set to:",max_setting)
       max_possible_line = paste("This job's params would allow for a work limit of:",max_setting_correct)
-      rec_line = "The gist is:"
+      rec_line = "The gist is:<br>"
       if (max_setting == Inf) {
         if (max_setting_correct == Inf) {
           reponse = "There are no Test Questions in this job. 
@@ -479,6 +479,49 @@ shinyServer(function(input, output){
     }
   })
   
-  
+  output$not_in_yet_summary <- renderText({
+    if (input$get_job == 0) {
+      # User has not uploaded a file yet
+      return(NULL)
+    } else {
+      line1 = "<div class=\"bar_divs\" id=\"not_in_yet_div\" style=\"display: none;\">"
+      title ="<h4>Not in yet</h4>"
+      num_maxed_out = get_num_maxed_out()
+      max_setting = get_max_setting()
+      max_setting_correct = get_max_setting_correct()
+      overview = paste0(num_maxed_out," workers meet qualifications but never visited this job.")
+      comment = ""
+      max_work_line = paste("Max work per worker is set to:",max_setting)
+      max_possible_line = paste("This job's params would allow for a work limit of:",max_setting_correct)
+      rec_line = "The gist is:<br>"
+      if (max_setting == Inf) {
+        if (max_setting_correct == Inf) {
+          reponse = "There are no Test Questions in this job. 
+          Technically, workers can work as much as they want to. 
+          We'd recommend setting a reasonable max work limit."
+        } else  {
+          response = paste("Max work limit is nto set. This is not good news.
+                           Set the limit to",max_setting_correct,"or lower.")
+        }
+        } else if (max_setting_correct == Inf) {
+          reponse = "There are no Test Questions in this job. 
+          Technically, workers can work as much as they want to. 
+          We'd recommend setting a reasonable max work limit."
+      } else if (max_setting_correct <= max_setting) {
+        response = paste("The work limit is set too high! Set it to <b>", max_setting_correct, "</b>or lower immediately")
+        } else if (max_setting_correct > max_setting) {
+          response = paste("The work limit can be safely increased to <b>", 
+                           max_setting_correct,
+                           "</b>.")
+        } else {
+          response ="Something weird has happened. We've got nothing to say."
+        }
+      last_line = paste(rec_line,response)
+      closing_div = "</div>"
+      summary = paste(line1, title, overview, comment, max_work_line, 
+                      max_possible_line, last_line, closing_div, sep="<br>")
+      paste(summary)
+      }
+    })
   
 })
