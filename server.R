@@ -67,19 +67,16 @@ shinyServer(function(input, output){
       if(job_id == 0){
         return(NULL)
       }else{
-        data = get_channel_data(job_id) 
+        db = db_call
+        query = get_channel_data(job_id) 
+        file = paste0(temp_dir,"/",
+                      "builder_channels", "_", job_id, "_",
+                      format(Sys.time(), "%b_%d_%X_%Y"),
+                      ".csv")
+        data = run_this_query(db, query, file)
+        data
       }
     } 
-  })
-  
-  output$channelData <- renderTable({
-    if(input$get_job == 0){
-      return(NULL)
-      #}else if(input$get_job != 0){
-    }else{
-      table = pull_channel_data()
-      table
-    }
   })
   
   pull_job_data <- reactive({
@@ -92,24 +89,15 @@ shinyServer(function(input, output){
       if(job_id == 0){
         return(NULL)
       }else{
-        data = get_job_data(job_id) 
-        print(head(data))
+        db = db_call
+        query = get_job_data(job_id) 
+        file = paste0(temp_dir,"/",
+                      "builder_jobs", "_", job_id, "_",
+                      format(Sys.time(), "%b_%d_%X_%Y"),
+                      ".csv")
+        data = run_this_query(db, query, file)
         data
       }
-    }
-  })
-  
-  output$jobData <- renderTable({
-    if(input$get_job == 0){
-      return(NULL)
-    }else{
-      job_id = input$job_id
-      if(job_id == 0){
-        return(NULL)
-      }else{
-        table = pull_job_data()
-        table
-      } 
     }
   })
   
@@ -121,7 +109,6 @@ shinyServer(function(input, output){
       if (job_id == 0) {
         return(NULL)
       }else{
-        print("in pull_workset_data")
         db = db_call
         query = get_workset_data(job_id)
         file = paste0(temp_dir,"/",
@@ -129,9 +116,6 @@ shinyServer(function(input, output){
                       format(Sys.time(), "%b_%d_%X_%Y"),
                       ".csv")
         data = run_this_query(db, query, file)
-        print("Workset server Line 132")
-        print(names(data))
-        print(head(data))
         data
       } 
     }
@@ -193,22 +177,6 @@ shinyServer(function(input, output){
         data
       } 
     }
-  })
-  
-  output$payrateSatisfaction <-  renderTable({
-    if(input$get_job == 0){
-      return(NULL)
-    }else{
-      job_id = input$job_id
-      if(job_id == 0){
-        return(NULL)
-      }else{
-        table = pull_payrate_satisfaction()
-        print(summary(table))
-        head(table)
-      } 
-    }
-    
   })
   
   pull_dropout_rate <- reactive({
@@ -481,14 +449,22 @@ shinyServer(function(input, output){
       
       total_judgments = sum(workset$judgments_count - workset$golds_count)
       
-      untrusted_judgments = 
-        sum((workset$judgments_count[workset$tainted == "t"] - workset$golds_count[workset$tainted == "t"]))
+      print("workset is:")
+      print(head(workset))
+      
+      tainted_work = 
+        workset[workset$tainted == "t",]
+        
+      untrusted_all = sum(tainted_work$judgments_count)
+      untrusted_golds = sum(tainted_work$golds_count)
+      
+      untrusted_judgments = untrusted_all - untrusted_golds
       trusted_judgments = total_judgments - untrusted_judgments
       
       if (num_gold_units == 0) {
         gold_message = "<p style='color:red;'>It looks like there are NOT any <b>TQs</b> in this job. 
                         Unless this is a survey job or a doublepass job, 
-                         they should use test questions.</p>"
+                        they should use test questions.</p>"
       } else {
         gold_message = ""
       }
@@ -515,6 +491,7 @@ shinyServer(function(input, output){
     } else {
       #Data to grab
       json = get_job_settings_from_json()
+      channels = pull_channel_data()
       
       #Max Work Settings
       mjw = json$max_judgments_per_worker
@@ -523,18 +500,49 @@ shinyServer(function(input, output){
       #Skills Required
       skills <- json$minimum_requirements$skill_scores
       skill_names = names(skills)
-      print("Skill Names?")
-      print(skill_names)
-      
-      count = length(skill_names[grepl("level_\\d_contributors", skill_names)])
-      print(count)
       
       #QM Settings
       quiz_mode = json$options$front_load
       after_gold = json$options$after_gold
       upa = json$units_per_assignment
+      ppt = json$payment_cents
       
-      
+      #Number of Channels
+      num_channels = length(channels$channel_name)
+
+      overall_message = paste("<h4>Settings Summary</h4>",
+                        "<p>Max Work per Contributor: ", mjw, "<br>",
+                        "Max Work per IP: ", mjip, "<br>",
+                        "Skill Requirements: ", paste(skill_names, collapse=","), "<br>",
+                        "Quiz Mode: ", quiz_mode,"<br>",
+                        "Units per Task: ", upa,"<br>",
+                        "Payment per Task: ", ppt, "<br>",
+                        "Number of Channels Enabled: ", num_channels, "<br>",
+                        "</p>", sep="")
+
+      paste(overall_message)
+    } 
+  })
+  
+  output$job_settings_warnings <- renderText({
+      #Data to grab
+      json = get_job_settings_from_json()
+    
+      #Max Work Settings
+      mjw = json$max_judgments_per_worker
+      mjip = json$max_judgments_per_ip
+    
+      #Skills Required
+      skills <- json$minimum_requirements$skill_scores
+      skill_names = names(skills)
+    
+      count = length(skill_names[grepl("level_\\d_contributors", skill_names)])
+  
+      #QM Settings
+      quiz_mode = json$options$front_load
+      after_gold = json$options$after_gold
+      upa = json$units_per_assignment
+    
       if (is.null(mjw)) {
         mjw_message = "<p style='color:red;'> Whoa. The max work per judgments setting is empty. 
         This means contributors can be in the job for as long as they want 
@@ -543,7 +551,7 @@ shinyServer(function(input, output){
       } else {
         mjw_message = ""
       }
-      
+    
       if (is.null(mjip)) {
         mjip_message = "<p style='color:red;'> Ah oh. There is no Max Work per IP set.
         This means someone coming from one IP can contribute work with many contributor IDs.
@@ -551,33 +559,24 @@ shinyServer(function(input, output){
       } else {
         mjip_message = ""
       }
-      
+    
       if(count == 0){
         skill_message = "<p style='color:red;'>Hmmm. We did not detect a leveled crowd. 
         Is that on purpose?</p>"
       } else {
         skill_message = ""
       }
-      
+    
       if(is.null(quiz_mode)){
         qm_message = "<p style='color:red;'>So there is no quiz mode in this job. 
-                   Is that on purpose?</p>"
+        Is that on purpose?</p>"
         quiz_mode = "FALSE"
       } else {
         qm_message=""
       }
-
-      overall_message = paste("<h4>Settings Summary</h4>",
-                        "<p>Max Work per Contributor: ", mjw, "<br>",
-                        "Max Work per IP: ", mjip, "<br>",
-                        "Skill Requirements: ", paste(skill_names, collapse=","), "<br>",
-                        "Quiz Mode: ", quiz_mode,"<br>",
-                        "Units per Assignment: ", upa,"<br>",
-                        "</p>", sep="")
-
-      paste(overall_message, mjw_message, mjip_message, skill_message, qm_message)
+    
+      paste(mjw_message, mjip_message, skill_message, qm_message)
     } 
   })
-  
   
 })
