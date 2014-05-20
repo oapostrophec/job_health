@@ -20,6 +20,7 @@ shinyUI(pageWithSidebar(
     htmlOutput("accountSummary")),
   mainPanel(tabsetPanel(
     tabPanel("Throughput Analysis",
+             div(htmlOutput("job_settings_message"), class="span9 well"),
              div(h4("Alerts"), 
                  HTML('<ul>
                        <li>Alert for Small Worker Pool</li>

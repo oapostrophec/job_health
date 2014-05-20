@@ -472,7 +472,6 @@ shinyServer(function(input, output){
       workset = pull_workset_data()
       workset = as.data.frame(workset)
       
-      
       #Variables to Display
       job_title = json$title 
       job_state = json$state
@@ -480,14 +479,16 @@ shinyServer(function(input, output){
       num_gold_units = json$golds_count
       num_nongold_units = json$units_count - json$golds_count
       
-      total_judgments = sum(workset$judgments_count)
+      total_judgments = sum(workset$judgments_count - workset$golds_count)
       
       untrusted_judgments = 
-        sum(workset$judgments_count[workset$tainted == "t"])
+        sum((workset$judgments_count[workset$tainted == "t"] - workset$golds_count[workset$tainted == "t"]))
       trusted_judgments = total_judgments - untrusted_judgments
       
       if (num_gold_units == 0) {
-        gold_message = "<p style='color:red;'>It looks like there are NOT any <b>TQs</b> in this job. Unless this is a survey job or a doublepass job, they should use test questions."
+        gold_message = "<p style='color:red;'>It looks like there are NOT any <b>TQs</b> in this job. 
+                        Unless this is a survey job or a doublepass job, 
+                         they should use test questions.</p>"
       } else {
         gold_message = ""
       }
@@ -504,6 +505,77 @@ shinyServer(function(input, output){
                               "</ul>", sep="")
       
       paste(overall_message, gold_message)
+    } 
+  })
+  
+  output$job_settings_message <- renderText({
+    if (input$get_job == 0 || input$job_id == 0) {
+      # User has not uploaded a file yet
+      return("<p>No job data to return.</p>")
+    } else {
+      #Data to grab
+      json = get_job_settings_from_json()
+      
+      #Max Work Settings
+      mjw = json$max_judgments_per_worker
+      mjip = json$max_judgments_per_ip
+      
+      #Skills Required
+      skills <- json$minimum_requirements$skill_scores
+      skill_names = names(skills)
+      print("Skill Names?")
+      print(skill_names)
+      
+      count = length(skill_names[grepl("level_\\d_contributors", skill_names)])
+      print(count)
+      
+      #QM Settings
+      quiz_mode = json$options$front_load
+      after_gold = json$options$after_gold
+      upa = json$units_per_assignment
+      
+      
+      if (is.null(mjw)) {
+        mjw_message = "<p style='color:red;'> Whoa. The max work per judgments setting is empty. 
+        This means contributors can be in the job for as long as they want 
+        and have the opportunity to learn TQ's. 
+        See the success center docs for more info on how to set this.</p>"
+      } else {
+        mjw_message = ""
+      }
+      
+      if (is.null(mjip)) {
+        mjip_message = "<p style='color:red;'> Ah oh. There is no Max Work per IP set.
+        This means someone coming from one IP can contribute work with many contributor IDs.
+        See the success center docs for more info on how to set this.</p>"
+      } else {
+        mjip_message = ""
+      }
+      
+      if(count == 0){
+        skill_message = "<p style='color:red;'>Hmmm. We did not detect a leveled crowd. 
+        Is that on purpose?</p>"
+      } else {
+        skill_message = ""
+      }
+      
+      if(is.null(quiz_mode)){
+        qm_message = "<p style='color:red;'>So there is no quiz mode in this job. 
+                   Is that on purpose?</p>"
+        quiz_mode = "FALSE"
+      } else {
+        qm_message=""
+      }
+
+      overall_message = paste("<h4>Settings Summary</h4>",
+                        "<p>Max Work per Contributor: ", mjw, "<br>",
+                        "Max Work per IP: ", mjip, "<br>",
+                        "Skill Requirements: ", paste(skill_names, collapse=","), "<br>",
+                        "Quiz Mode: ", quiz_mode,"<br>",
+                        "Units per Assignment: ", upa,"<br>",
+                        "</p>", sep="")
+
+      paste(overall_message, mjw_message, mjip_message, skill_message, qm_message)
     } 
   })
   
