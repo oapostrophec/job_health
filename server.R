@@ -587,4 +587,90 @@ shinyServer(function(input, output){
     } 
   })
   
+  output$throughput_warnings <- renderText({
+    #if (input$get_job == 0 || input$job_id == 0) {
+    # User has not uploaded a file yet
+    #  return("<p>No job data to return.</p>")
+    #} else {
+    #json = get_job_settings_from_json()
+    available = 99
+    #get_worker_intersect()
+    maxed = 20 
+    #get_maxed_out()
+    tainted = 10
+    #get_tainted()
+    qm_fail = 15
+    #get_qm_failures()
+    dropouts = 20
+    #get_dropouts() 
+    onlookers = 20
+    #get_onlookers()
+    viable = 10
+    #get_viable() 
+    
+    #reject_at = json$options$reject_at
+    if(available < 100 || is.na(available) || is.null(available)){
+      too_small = "<h4 style='color:red;'>Hold Up: The contributor pool for this job is very small. 
+      You need to consider broadening it (targetting more countries, levels, etc) 
+      or resetting your through put expectations.</h4>"
+    } else {
+      too_small=""
+    }
+    
+    total_worked = viable + maxed + tainted + qm_fail + dropouts + onlookers
+    percent_viable = (viable/total_worked)*100
+    percent_maxed = (maxed/total_worked) * 100
+    percent_tainted = (tainted/total_worked) * 100
+    percent_qm_fail = (qm_fail/total_worked) * 100
+    percent_dropouts = (dropouts/total_worked) * 100
+    percent_onlookers = (onlookers/total_worked) * 100
+    
+    print(paste("Viable:", percent_viable))
+    print(paste("Maxed:", percent_maxed))
+    print(paste("Tainted:", percent_tainted))
+    print(paste("QM Fail:", percent_qm_fail))
+    print(paste("Dropouts:", percent_dropouts))
+    print(paste("Onlookers:", percent_onlookers))
+    
+    if(percent_viable < 20){
+      viable_message = "<p style='color:red;'>Careful: Looks like your group of active contributors is dwindling.</p>"
+    } else {
+      viable_message = ""
+    }
+    
+    if(percent_tainted + percent_qm_fail > 40){
+      failure_message = "<p style='color:red;'>Ah oh: We're getting a lot of failures in quiz and
+      work mode. You may want to check on the Test Questions and the reject_at rate.</p>"
+    } else {
+      failure_message = ""
+    }
+    
+    if(percent_maxed > 50){
+      maxed_message = "<p style='color:red;'>Note: Over %50 of the workers in the job have maxed out. If the job is not near to finishing you may want to add more TQs or up the max work settings.</p>"
+    } else {
+      maxed_message = ""
+    }
+    
+    if(percent_dropouts + percent_onlookers > 35){
+      lookers_message = "<p style='color:red'>Ah oh: We're seeing a high percentage of contributors just looking at the task or giving up after quiz mode. You may want to up the Payment per Task or broaden your contributor target.</p>"
+    } else {
+      lookers_message = ""
+    }
+    
+    overall_message = paste("<hr><ul class='unstyled'>
+                            <li><b>Total Available: ", available,
+                            "</b><hr></li><li>Total Working: ", viable,
+                            "</li><li>Total Maxed Out: ", maxed,
+                            "</li><li>Total Tainted: ", tainted,
+                            "</li><li>Quiz Mode Failures: ", qm_fail,
+                            "</li><li>Dropouts: ", dropouts,
+                            "</li><li>Onlookers: ", onlookers,
+                            "</li></ul>")
+    
+    paste(too_small, viable_message, failure_message, maxed_message, lookers_message, overall_message)
+    
+    #}
+    
+  })
+  
 })

@@ -22,12 +22,8 @@ shinyUI(pageWithSidebar(
     tabPanel("Throughput Analysis",
              div(htmlOutput("job_settings_message"), class="span9 well"),
              div(h4("Alerts"), 
-                 HTML('<ul>
-                       <li>Alert for Small Worker Pool</li>
-                       <li>Low Pay Alert</li>
-                       <li>Lost &amp; Stopped Work Alert</li>
-                       </ul>'), class="span6 well"),
-             div(h4("Bar Charts here for available workers & current worker breakdowns"), class="span5")
+                 htmlOutput("throughput_warnings"), class="span8 well"),
+             div(h4("Bar Charts here for available workers & current worker breakdowns"), class="span10")
              #tableOutput("channelData"),
              #tableOutput("worksetData"),
              #,
