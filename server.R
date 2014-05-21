@@ -471,13 +471,13 @@ shinyServer(function(input, output){
       
       overall_message = paste("<h5>Job Summary</h5>",
                               "<ul class=\"unstyled\"><li>Job Title:<br>", job_title, "</li><br>",
-                              "<li>State:", job_state, "</li>",
-                              "<li>Email:", support_email, "</li>",
-                              "<li>Units:", num_nongold_units, "</li>",
-                              "<li>Test Questions:", num_gold_units, "</li><br>",
-                              "<li>Total Judgments:", total_judgments, "</li>",
-                              "<li>Untrusted Judgments:", untrusted_judgments, "</li>",
-                              "<li>Trusted Judgments:", trusted_judgments, "</li>",
+                              "<li>State: ", job_state, "</li>",
+                              "<li>Email: ", support_email, "</li>",
+                              "<li>Units: ", num_nongold_units, "</li>",
+                              "<li>Test Questions: ", num_gold_units, "</li><br>",
+                              "<li>Total Judgments: ", total_judgments, "</li>",
+                              "<li>Untrusted Judgments: ", untrusted_judgments, "</li>",
+                              "<li>Trusted Judgments: ", trusted_judgments, "</li>",
                               "</ul>", sep="")
       
       paste(overall_message, gold_message)
@@ -503,7 +503,12 @@ shinyServer(function(input, output){
       
       #QM Settings
       quiz_mode = json$options$front_load
+      if(is.null(quiz_mode)){
+        quiz_mode = "FALSE"
+      }
       after_gold = json$options$after_gold
+      
+      #Units and Payments
       upa = json$units_per_assignment
       ppt = json$payment_cents
       
@@ -513,7 +518,7 @@ shinyServer(function(input, output){
       overall_message = paste("<h4>Settings Summary</h4>",
                         "<p>Max Work per Contributor: ", mjw, "<br>",
                         "Max Work per IP: ", mjip, "<br>",
-                        "Skill Requirements: ", paste(skill_names, collapse=","), "<br>",
+                        "Skill Requirements: ", paste(skill_names, collapse="\n"), "<br>",
                         "Quiz Mode: ", quiz_mode,"<br>",
                         "Units per Task: ", upa,"<br>",
                         "Payment per Task: ", ppt, "<br>",
@@ -525,6 +530,10 @@ shinyServer(function(input, output){
   })
   
   output$job_settings_warnings <- renderText({
+    if (input$get_job == 0 || input$job_id == 0) {
+      # User has not uploaded a file yet
+      return("<p>No job data to return.</p>")
+    } else {
       #Data to grab
       json = get_job_settings_from_json()
     
@@ -570,7 +579,6 @@ shinyServer(function(input, output){
       if(is.null(quiz_mode)){
         qm_message = "<p style='color:red;'>So there is no quiz mode in this job. 
         Is that on purpose?</p>"
-        quiz_mode = "FALSE"
       } else {
         qm_message=""
       }
