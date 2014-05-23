@@ -26,21 +26,28 @@ shinyUI(pageWithSidebar(
                        <li>Low Pay Alert</li>
                        <li>Lost &amp; Stopped Work Alert</li>
                        </ul>'), class="span6 well"),
-             div(h4("Bar Charts here for available workers & current worker breakdowns"), class="span5")
+             div(h4("Bar Charts here for available workers & current worker breakdowns"), class="span5"),
              #tableOutput("channelData"),
              #tableOutput("worksetData"),
              #,
-             #tableOutput("numJobsAvailable"),
+             tableOutput("numJobsAvailable")
              #tableOutput("payrateSatisfaction")
              #tableOutput("five_num_worker_table")
     ),
     tabPanel("Quality Analysis"),
-    tabPanel("Detected Job Flaws",
+    tabPanel("Detected Job Flaws"),
+    tabPanel("Throughput (caution:runs slowly)",
              showOutput("throughput_bar", "highcharts"),
+             #showOutput("tainted_bar",  "highcharts"),
              htmlOutput("maxed_out_summary"),
              htmlOutput("not_in_yet_summary"),
-             div(h4("Drill down for Tainted"), class="bar_divs", id="tainted_div", style="display:none"),
-             div(h4("Drill down for Chacked Out"), class="bar_divs", id="checked_out_div", style="display:none")
+             htmlOutput("checked_out_summary"),
+             htmlOutput("tainted_summary"),
+             htmlOutput("working_summary")
+             #,
+             #div(h4("Drill down for Tainted"), class="bar_divs", id="tainted_div", style="display:none")
+             #,
+             #div(h4("Drill down for Chacked Out"), class="bar_divs", id="checked_out_div", style="display:none")
     )
   )
   )
