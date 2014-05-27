@@ -21,12 +21,11 @@ shinyUI(pageWithSidebar(
   mainPanel(tabsetPanel(
     tabPanel("Throughput Analysis",
              div(htmlOutput("job_settings_message"), class="span9 alert alert-info"),
-             div(htmlOutput("throughput_erros"), class="span10"),
+             div(htmlOutput("throughput_errors"), class="span10"),
              div(htmlOutput("throughput_warnings"), class="span10")
              #tableOutput("channelData"),
              #tableOutput("worksetData"),
-             #,
-             #tableOutput("numJobsAvailable"),
+             #tableOutput("numJobsAvailable")
              #tableOutput("payrateSatisfaction")
              #tableOutput("five_num_worker_table")
     ),
@@ -49,17 +48,25 @@ shinyUI(pageWithSidebar(
              ),
     tabPanel("Detected Job Flaws",
              div(htmlOutput("job_settings_warnings"), class="span10"),
-             div(htmlOutput("job_settings_overview"), class="span11 alert alert-info"),
+             div(htmlOutput("job_settings_overview"), class="span11 alert alert-info")
+             #showOutput("throughput_bar", "highcharts")
+             #showOutput("tainted_bar",  "highcharts"),
+             #div(h4("Drill down for Tainted"), class="bar_divs", id="tainted_div", style="display:none")
+             #,
+             #div(h4("Drill down for Chacked Out"), class="bar_divs", id="checked_out_div", style="display:none")
+    ),
+    tabPanel("Throughput (caution:runs slowly)",
              showOutput("throughput_bar", "highcharts"),
-             htmlOutput("maxed_out_summary1"),
-             tags$div(class="bar_divs", id="maxed_out_div", style="display:none",
-               tags$h4("Drill down for Maxed Out"),
-               textOutput("maxed_out_summary")
-               ),
-             #div(h4("Drill down for Working"), class="bar_divs", id="working_div", style="display:none"),
-             div(h4("Drill down for Tainted"), class="bar_divs", id="tainted_div", style="display:none"),
-             div(h4("Drill down for Chacked Out"), class="bar_divs", id="checked_out_div", style="display:none"),
-             div(h4("Drill down for Not In Yet"), class="bar_divs", id="not_in_yet_div", style="display:none")
+             #showOutput("tainted_bar",  "highcharts"),
+             htmlOutput("maxed_out_summary"),
+             htmlOutput("not_in_yet_summary"),
+             htmlOutput("checked_out_summary"),
+             htmlOutput("tainted_summary"),
+             htmlOutput("working_summary")
+             #,
+             #div(h4("Drill down for Tainted"), class="bar_divs", id="tainted_div", style="display:none")
+             #,
+             #div(h4("Drill down for Chacked Out"), class="bar_divs", id="checked_out_div", style="display:none")
     )
   )
   )
