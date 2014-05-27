@@ -20,10 +20,9 @@ shinyUI(pageWithSidebar(
     htmlOutput("accountSummary")),
   mainPanel(tabsetPanel(
     tabPanel("Throughput Analysis",
-             div(htmlOutput("job_settings_message"), class="span9 well"),
-             div(h4("Alerts"), 
-                 htmlOutput("throughput_warnings"), class="span8 well"),
-             div(h4("Bar Charts here for available workers & current worker breakdowns"), class="span10")
+             div(htmlOutput("job_settings_message"), class="span9 alert alert-info"),
+             div(htmlOutput("throughput_erros"), class="span10"),
+             div(htmlOutput("throughput_warnings"), class="span10")
              #tableOutput("channelData"),
              #tableOutput("worksetData"),
              #,
@@ -31,8 +30,26 @@ shinyUI(pageWithSidebar(
              #tableOutput("payrateSatisfaction")
              #tableOutput("five_num_worker_table")
     ),
-    tabPanel("Quality Analysis"),
+    tabPanel("Quality Analysis",
+             div(htmlOutput("quality_gold_errors"), class="span11"),
+             div(htmlOutput("quality_times_warnings"), class="span11"),
+             div(htmlOutput("quality_cautions"), class="span11"),
+             div(p("Graph on TQs"),
+                 a("Missed TQs Bar Chart", target="_blank", href="http://www.highcharts.com/demo/column-rotated-labels/grid-light"), 
+                 class="span6 well"),
+             div(p("Graph Speed Density"), 
+                 a("Density Graph of Submission Rates", target="_blank", href="http://www.highcharts.com/demo/area-basic/grid-light"),
+                 class="span5 well"),
+             div(p("Graph on Gold Value Distros"), 
+                 a("Provided Gold Answers Bar Chart", target="_blank", href="http://www.highcharts.com/demo/column-rotated-labels/grid-light"),
+                 class="span6 well"),
+             div(p("Graph on Answer Distros"), 
+                 a("Bar Chart Group by Gold Answers and Unit Answers", target="_blank", href="http://www.highcharts.com/demo/column-basic/grid-light"),
+                 class="span5 well")
+             ),
     tabPanel("Detected Job Flaws",
+             div(htmlOutput("job_settings_warnings"), class="span10"),
+             div(htmlOutput("job_settings_overview"), class="span11 alert alert-info"),
              showOutput("throughput_bar", "highcharts"),
              htmlOutput("maxed_out_summary1"),
              tags$div(class="bar_divs", id="maxed_out_div", style="display:none",
