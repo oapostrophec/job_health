@@ -343,15 +343,15 @@ shinyServer(function(input, output){
       state_counts = get_state_counts() 
       print(337)
       responses_table_transformed = data.frame(group=states,
-                                               y = state_counts, # these are the numbers found in groups
-                                               x=rep(as.character(job_id),times=5), # this is a fake grouping variable
-                                               preserve_order = 1:5,
-                                               info = c("<b>Maxed out</b>",
-                                                        "<b>Active workers who can still make more judgments</b>",
-                                                        "<b>Tainted workers</b>",
-                                                        "<b>Checked the job out, didn't make judgments</b>",
-                                                        "<b>Never entered the job</b>"), # this is a vector of html vars describing tooltips
-                                               click_action = div_names
+                              y = state_counts, # these are the numbers found in groups
+                              x=rep(as.character(job_id),times=5), # this is a fake grouping variable
+                              preserve_order = 1:5,
+                              info = c("<b>Maxed out</b>",
+                                       "<b>Active workers who can still make more judgments</b>",
+                                       "<b>Tainted workers</b>",
+                                       "<b>Checked the job out, didn't make judgments</b>",
+                                       "<b>Never entered the job</b>"), # this is a vector of html vars describing tooltips
+                                        click_action = div_names
       )
       
       
@@ -973,7 +973,7 @@ shinyServer(function(input, output){
     j = 5
     
     if(i < j){
-      tq_message = "<p><i class=\"icon-edit\"></i> Eek: There are quite a few test questions that are highly missed. 
+      tq_message = "<p><i class=\"icon-edit\"></i> Missed TQ's: There are quite a few test questions that are highly missed. 
       We would update those before digging into Quality too much.</p>"
     } else {
       tq_message = ""
@@ -991,8 +991,8 @@ shinyServer(function(input, output){
     #Bad Validators
     #If a gold answer does not match the validators (for text) or names/values (for non text)
     if(i < j){
-      validators_message = "<p><i class=\"icon-fire\"></i><big> WARNING! We detected that some of the answers provided in TQs DO NOT match the values provided in CML. 
-      Please pause and fix this before continuing.</big><p>"
+      validators_message = "<p><i class=\"icon-fire\"></i><b> WARNING! We detected that some of the answers provided in TQs DO NOT match the values provided in CML. 
+      Please pause and fix this before continuing.</b><p>"
     } else {
       validators_message = ""
     }
