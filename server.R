@@ -6,7 +6,6 @@ require('shiny')
 require('datasets')
 require('data.table')
 require('plyr')
-require('devtools')
 require('stringr')
 require('reshape2')
 require('stringr')
@@ -19,7 +18,6 @@ source('get_job_data.R')
 #source('get_country_data.R')
 source('get_channel_data.R')
 #source('get_worker_data.R')
-source('get_workset_data.R')
 source('db_call_function.R')
 source('run_this_query_function.R')
 source('work_available_query_function.R')
@@ -27,12 +25,8 @@ source('payrate_satisfaction_query_function.R')
 source('dropout_rate_query_function.R')
 source('find_cml_elements.R')
 source('velocity_violations_query_function.R')
-source('answer_flags_query_function.R')
-source('all_taints_query_function.R')
-source('trust_taints_query_function.R')
-source('workers_with_judgments_query_function.R')
 source('everyone_available_query_function.R')
-source('workers_with_no_judgments_query.R')
+source('worker_stats_query_function.R')
 
 
 temp_dir = "/tmp/job_health"
@@ -106,6 +100,38 @@ shinyServer(function(input, output){
     } 
   })
   
+  output$channelData <- renderTable({
+    if(input$get_job == 0){
+      return(NULL)
+      #}else if(input$get_job != 0){
+    }else{
+      table = pull_channel_data()
+      table
+    }
+  })
+  
+  pull_worker_stats <- reactive({
+    if(input$get_job == 0 ||  input$job_id == 0){
+      return(NULL)
+    }else{
+      job_id = input$job_id
+      print("in pull_worker_stats")
+      db = db_call
+      print("line 111")
+      query = worker_stats_query(job_id)
+      file = paste0(temp_dir,"/",
+                    "worker_stats", "_", job_id, "_",
+                    format(Sys.time(), "%b_%d_%X_%Y"),
+                    ".csv")
+      data = run_this_query(db, query, file)
+      print("line 118")
+      print("Workset server Line 1117")
+      print(names(data))
+      print(head(data))
+      data
+    }
+  })
+  
   pull_job_data <- reactive({
     #if(input$get_job == 0 && input$get_email == 0){
     if(input$get_job == 0){
@@ -136,16 +162,11 @@ shinyServer(function(input, output){
       if (job_id == 0) {
         return(NULL)
       }else{
-        db = db_call
-        query = get_workset_data(job_id)
-        file = paste0(temp_dir,"/",
-                      "workset", "_", job_id, "_",
-                      format(Sys.time(), "%b_%d_%X_%Y"),
-                      ".csv")
-        data = run_this_query(db, query, file)
-        print("Workset server Line 150")
-        print(names(data))
-        print(head(data))
+        print("in pull_workset_data")
+        worker_stats = pull_worker_stats()
+        data = worker_stats[,c("worker_id", "id", "golden_trust", "golds_count", 
+                               "missed_count", "forgiven_count", "judgments_count", 
+                               "flagged_at", "rejected_at", "tainted")]
         data
       } 
     }
@@ -309,16 +330,8 @@ shinyServer(function(input, output){
     } else {
       job_id = input$job_id
       print("in get_number_checked_out")
-      db = db_call
-      query = workers_with_no_judgments_query(job_id)
-      file = paste0(temp_dir,"/",
-                    "checked_out", "_", job_id, "_",
-                    format(Sys.time(), "%b_%d_%X_%Y"),
-                    ".csv")
-      data = run_this_query(db, query, file)
-      print("Workset server Line 337")
-      print(names(data))
-      print(head(data))
+      worker_stats = pull_worker_stats()
+      data = sum(worker_stats$no_judgments==1)
       data
       
     }
@@ -495,14 +508,19 @@ shinyServer(function(input, output){
         lapply(json$excluded_countries, function(x) x$name)
       )
       print(country_exclude_vector)
+      min_required_skills = json$minimum_requirements$min_score
       query = everyone_available_query(skills = skill_vector,
                                        countries_include = country_include_vector,
-                                       countries_exclude = country_exclude_vector)
+                                       countries_exclude = country_exclude_vector,
+                                       min_score = min_required_skills)
       file = paste0(temp_dir,"/",
                     "everyone_available", "_", job_id, "_",
                     format(Sys.time(), "%b_%d_%X_%Y"),
                     ".csv")
       data = run_this_query(db, query, file)
+      #data = read.csv(paste0(temp_dir,"/",
+      #                       "everyone_available_385528_May_23_15:38:15_2014.csv"))
+      #data= data[1,]
       print("Workset server Line 518")
       print(names(data))
       print(head(data))
@@ -1188,6 +1206,37 @@ price_available_plot <-  reactive({
           type= "category")
       )
     } 
+    
+    ######################## experimental section ###########################
+    #series1 = everything with prices
+    agg1 = aggregate(data = price_df, active_workers ~ cents_per_unit + skills, FUN=sum)
+    series1 = split(x = agg1, f = rownames(agg1))
+    #series2 = only more / less
+    this_price = 2.5
+    more_less = price_df
+    more_less$less_than_yours = price_df$cents_per_unit <= 2.5
+    agg2 = aggregate(data = more_less, active_workers ~ cents_per_unit + less_than_yours + skills, FUN=sum)
+    series2 = split(x = agg2, f = agg2$less_than_yours)
+    df1 = split(series2[[1]], 1:nrow(series2[[1]]))
+    df2 = split(series2[[2]], 1:nrow(series2[[2]]))
+    #make plot
+    h2 <- rCharts::Highcharts$new()
+    #h2$series(data = series1, type = "column", id = "prices") # add the detailed series
+    main_df = list(
+      list(name = "less than you", drilldown = "less_than_yours", y = sum(
+        more_less$active_workers[more_less$less_than_yours == T]
+      )
+      ),
+      list(name = "more than you", drilldown = "more than yours", y = sum(
+        more_less$active_workers[more_less$less_than_yours == F]
+      )
+      )
+    )
+    h2$series(data = main_df, name = 'Things')
+    #h2$drilldown$series(data = df1, type = "column", id = "less_than_yours") # add the more less series
+    #h2$drilldown$series(data = df2, type = "column", id = "more than yours") # add the more less series
+    #########################################################################
+    
     h1
     
   })
@@ -1283,17 +1332,9 @@ pull_speed_violations <- reactive({
       return(NULL)
     }else{
       job_id = input$job_id
-      print("in pull_answer_flags")
-      db = db_call
-      query = answer_flags_query(job_id)
-      file = paste0(temp_dir,"/",
-                    "answer_flags", "_", job_id, "_",
-                    format(Sys.time(), "%b_%d_%X_%Y"),
-                    ".csv")
-      data = run_this_query(db, query, file)
-      print("Workset server Line 792")
-      print(names(data))
-      print(head(data))
+      print(job_id)
+      worker_stats = pull_worker_stats()
+      data = worker_stats[worker_stats$answer_distribution_flags == 1,c("worker_id", "flag_reason")]
       data
     } 
   })
@@ -1303,16 +1344,13 @@ pull_speed_violations <- reactive({
       return(NULL)
     }else{
       job_id = input$job_id
-      print("in pull_answer_flags")
-      db = db_call
-      query = trust_taints_query(job_id)
-      file = paste0(temp_dir,"/",
-                    "trust_taints", "_", job_id, "_",
-                    format(Sys.time(), "%b_%d_%X_%Y"),
-                    ".csv")
-      data = run_this_query(db, query, file)
-      print("Workset server Line 812")
-      print(names(data))
+      print("in pull_trust_taints")
+      print(job_id)
+      worker_stats = pull_worker_stats()
+      print("line 825")
+      print(head(worker_stats))
+      data = worker_stats[worker_stats$trust_taint == 1, c("worker_id", "golden_trust")]
+      print("and now data")
       print(head(data))
       data
     } 
@@ -1323,17 +1361,10 @@ pull_speed_violations <- reactive({
       return(NULL)
     }else{
       job_id = input$job_id
-      print("in pull_answer_flags")
-      db = db_call
-      query = all_taints_query(job_id)
-      file = paste0(temp_dir,"/",
-                    "all_taints", "_", job_id, "_",
-                    format(Sys.time(), "%b_%d_%X_%Y"),
-                    ".csv")
-      data = run_this_query(db, query, file)
-      print("Workset server Line 832")
-      print(names(data))
-      print(head(data))
+      worker_stats = pull_worker_stats()
+      data = worker_stats[worker_stats$tainted == 't' | worker_stats$tainted == 'true',
+                          c("worker_id", "tainted", "flagged_at", "rejected_at", 
+                            "flag_reason", "golden_trust")]
       data
     } 
   })
@@ -1375,18 +1406,9 @@ pull_speed_violations <- reactive({
     } else {
       job_id = input$job_id
       print("in pull_judgment_counts")
-      db = db_call
-      query = workers_with_judgments_query(job_id)
-      print(query)
-      file = paste0(temp_dir,"/",
-                    "workers_with_judgments", "_", job_id, "_",
-                    format(Sys.time(), "%b_%d_%X_%Y"),
-                    ".csv")
-      data = run_this_query(db, query, file)
-      print("Workset server Line 884")
-      print(names(data))
-      print(head(data))
-      # a catcher for when there are no judgments in a job
+      worker_stats = pull_worker_stats()
+      data = worker_stats[worker_stats$num_judgments > 0,c("worker_id", "num_judgments")]
+      names(data) = c("worker_id", "judgments_count")
       if (nrow(data) == 0) {
         data[1,] = rep(0, times=ncol(data))
       } 
@@ -1400,17 +1422,54 @@ pull_speed_violations <- reactive({
       return(NULL)
     } else {
       workers_with_judgments = pull_judgment_counts()
-      
+      job_id = input$job_id
       print(head(workers_with_judgments))
+      workers_with_judgments = workers_with_judgments[order(workers_with_judgments$judgments_count),]
       workers_with_judgments$index = 1:nrow(workers_with_judgments)
+      #https://crowdflower.com/jobs/443343/contributors/1863365
+      workers_with_judgments$click_action = paste0("https://crowdflower.com/jobs/",
+                                                   job_id, 
+                                                   "/contributors/",
+                                                   workers_with_judgments$worker_id)
       
-      workers_with_judgments$worker_id = as.character(workers_with_judgments$worker_id)
-      h1 <- hPlot(judgments_count ~ worker_id,
-                  data = workers_with_judgments, 
-                  type = c("column"),
-                  name="")
       
-      # try categories to order this
+      #workers_with_judgments$worker_id = as.character(workers_with_judgments$worker_id)
+      #       h1 <- hPlot(judgments_count ~ worker_id,
+      #                   data = workers_with_judgments, 
+      #                   type = c("column"),
+      #                   name="")
+      
+      workers_with_judgments$x = workers_with_judgments$index # for proper ordering of bars
+      workers_with_judgments$y = workers_with_judgments$judgments_count
+      
+      h1 <- rCharts::Highcharts$new()
+      workers_with_judgments = lapply(split(workers_with_judgments, 
+                                            rownames(workers_with_judgments)), as.list)
+      names(workers_with_judgments) = NULL
+      print("Line 907")
+      print(workers_with_judgments[[1]])
+      h1$series(data = workers_with_judgments, type = "column", name = "Workers")
+      
+      
+      h1$plotOptions(
+        series = list(
+          cursor = 'pointer',
+          events = list(
+            click = 
+              "#! function() { window.open(this.options.data[0].click_action); } !#"
+          )
+        )
+      )
+      
+      
+      h1$tooltip(useHTML = T, formatter = 
+                   "#! function() { return('ID: ' + this.point.worker_id + '<br>' + 'Judgments: ' + this.point.y); } !#")
+      #       
+      #       h1$tooltip(useHTML = T, 
+      #                  formatter = "#! function() { return('<b>' + 'ID: ' + this.point.x '</b><br>' + this.point.y + ' judgments'); } !#")
+      #       
+      #       
+      # remove the x axis and the series name
       h1
     }
   })

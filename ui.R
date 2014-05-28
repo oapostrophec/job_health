@@ -55,7 +55,7 @@ shinyUI(pageWithSidebar(
              #,
              #div(h4("Drill down for Chacked Out"), class="bar_divs", id="checked_out_div", style="display:none")
     ),
-    tabPanel("Throughput (caution:runs slowly)",
+    tabPanel("Throughput (THE BAR)",
              showOutput("throughput_bar", "highcharts"),
              #showOutput("tainted_bar",  "highcharts"),
              htmlOutput("maxed_out_summary"),

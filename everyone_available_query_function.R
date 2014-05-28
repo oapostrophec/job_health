@@ -26,29 +26,38 @@
 #   -- END BLOCK
 # )
 
-everyone_available_query <- function(countries_include, countries_exclude, skills) {
+everyone_available_query <- function(countries_include, countries_exclude, skills, min_score) {
   if (length(countries_include) > 0) {
-    countries_include_line = " and country IN ('CA','US','FR', 'BR','PT')"
+    open = " and country IN ("
+    country_vector = paste(paste0("'", countries_include, "'"), collapse=",")
+    close= ")"
+    countries_include_line = paste0(open,country_vector,close)
   } else {
     countries_include_line = ""
   }
   if (length(countries_exclude) > 0) {
-    countries_exclude_line = "and NOT country IN ('CA')"
+    open = " and NOT country IN ("
+    country_vector = paste(paste0("'", countries_exclude, "'"), collapse=",")
+    close = ")"
+    countries_exclude_line = paste0(open,country_vector,close)
   } else {
     countries_exclude_line = ""
   }
   if (length(skills) > 0) {
-    skill_restriction_block = " and worker_id IN (select profiles_contributors.builder_contributor_id as contributor_id
+    part1 = " and worker_id IN (select profiles_contributors.builder_contributor_id as contributor_id
    from profiles_profile_elements
    join profiles_contributors 
    on profiles_profile_elements.contributor_id = profiles_contributors.id
    where skill_id in (select id from profiles_skills
-                      where name in ('level_1_contributors','portuguese_translation') -- SUPPLY your skill names here, comma separated
+                      where name in ("
+    skill_level = paste(paste0("'", skills, "'"), collapse=",")
+    part2 = ") 
    ) 
    and profiles_contributors.builder_contributor_id IS NOT NULL
    group by profiles_contributors.builder_contributor_id
-   having count(skill_id) >= 2"
-    
+   having count(skill_id) >= "
+    skill_counts = min_score
+    skill_restriction_block = paste0(part1, skill_level, part2, skill_counts)
   } else {
     skill_restriction_block = ""
   }
