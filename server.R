@@ -736,6 +736,133 @@ shinyServer(function(input, output){
     }
   })
   
+  output$job_settings_cautions <- renderText({
+    if (input$get_job == 0 || input$job_id == 0) {
+      return("<p>Waiting to pull job json.</p>")
+    } else {
+      
+      #Data to Grab
+      json = get_job_settings_from_json()
+      #gold answers - grab values per cml_name
+      
+      #Grab Elements
+      cml = json$cml
+      instructions = json$instructions
+      actual_pay = json$payment_cents
+      upa = json$units_per_assignment
+      
+      #instructions length
+      length_inst = instructions_length(instructions)
+      
+      if(length_inst > 1000){
+        inst_message = paste("<p><u>TLDR Warning</u>: The instructions seem pretty long. 
+                       Make sure this job cannot be broken down into simplier parts. 
+                       Or add essential tips and tricks into the task itself.</p>",
+                      "<p><b>Instructions Word Count</b>:", length_inst,"</p>")
+      } else if(length_inst < 100){
+        inst_message = paste("<p><u>Edge Case Warning</u>: These instructions are super short. 
+                       Are you sure you covered all your cases in the examples section of the instructions? 
+                       You can ignore this warning if the task is a survey.</p>",
+                       "<p><b>Instructions Word Count</b>:", length_inst,"</p>")
+      } else{
+        inst_message = ""
+      }
+      
+      #html errors
+      
+      #Bad Pricing - based on calculator
+      find_texts = '<cml:text(area)?(\\s|\\w|=|:|\"|\\[|\'|\\,|\\]|\\{|\\})*(required)'
+      find_clicks = 'href=\\"https?://'
+      #search number is a subset of clicks
+      find_search = 'href=\\"https?://(\\w|\\.|/)+(search)'
+      
+      click_markup = 0
+      search_markup = 0
+      text_markup = 0
+      level_markup = 0
+      
+      if(str_detect(cml, pattern=find_search)){
+        search_markup = .7
+      }
+      
+      if(str_detect(cml, pattern=find_clicks) && !(str_detect(cml, pattern=find_search))){
+        click_markup = .2	
+      }
+      
+      if(str_detect(cml, pattern=find_texts)){
+        text_markup = .3
+      } 
+      
+      ##Level Mark Ups
+      print("level scores")
+      print(json$minimum_requirements$skill_scores$level_3_contributors)
+      print(json$minimum_requirements$skill_scores$level_2_contributors)
+      
+      
+      if(!(is.null(json$minimum_requirements$skill_scores$level_3_contributors))){
+        level_markup = .3
+      }
+      
+      if(!(is.null(json$minimum_requirements$skill_scores$level_2_contributors))){
+        level_markup = .2
+      }
+      
+      pay_per_unit = 1 + click_markup + search_markup + text_markup + level_markup
+      suggested_pay = upa * pay_per_unit
+      
+      error = abs((suggested_pay - actual_pay)/suggested_pay)
+      direction = suggested_pay - actual_pay
+      if(error > .25){
+        if(direction < 0){
+          pay_warning = paste("<p><u>Over Payment Caution</u>: We believe you might be overpaying for this type of task. 
+          If you are getting the results you want within your expected cost then you may ignore this message. 
+          If not we suggest you pause the job and recalibrate the payments.</p>", "<p><b>Current Pay per Task:</b>",
+            actual_pay, "<br><b>Suggested Pay per Task:</b>", suggested_pay, "</p>")
+        }
+        if(direction > 0){
+          pay_warning = paste("<p><u>Under Payment Warning</u>: We believe based on the requirements of this task and 
+          the size of a single task that you are under paying. Please consider increasing the contributor pay or 
+          decreasing the assignment size.</p>", "<p><b>Current Pay per Task:</b>", actual_pay, "<br><b>Suggested Pay per Task:</b>", 
+          suggested_pay, "</p>")
+        }
+      } else {
+        pay_warning = ""
+      }
+      
+      
+      #Units per Assignment - based on calculator
+      #Count validated fields number of fields
+      find_validates = "validates=\"(\\w|:|\\[|\\]|\\'|\\,|\\{|\\})*\\s?(required)"
+      count_validates = str_count(cml, pattern=find_validates)
+      vpa = upa * count_validates
+      if(vpa > 19){
+        unit_warning = paste("<p><u>Long Task Warning</u>: Careful, we found an exorbitant amount of required fields in one task. 
+                             You may want to decrease the Units per Task. 
+                             If this is an image moderations type task you may ignore this message.</p>", 
+                             "<p><b>Number of Required Fields per Task:</b>", vpa,"</p>")
+      } else if(vpa < 6){
+        unit_warning = paste("<p><u>Short Task Warning</u>: Careful, it seems like there are not many required fields per task. 
+                             You may want to up the Units per Task setting to get more bang for your buck.</p>", 
+                             "<p><b>Number of Required Fields per Task:</b>", vpa,"</p>")
+      } else {
+        unit_warning =""
+      }
+      
+      if(pay_warning == "" && inst_message == "" && unit_warning == ""){
+        paste("<div class=\"alert alert-success\"><p><i class=\"icon-ok\"></i>
+              <big>Job Settings &amp; Design Concerns:</big>
+              <br>We do not have any suggestions on approving job design. 
+              Make sure to check the Job Settings Error section above before moving on.</p>",
+              "<ul class=\"unstyled\"><li>Suggested Pay: ", suggested_pay, " Actual Pay: ",
+              actual_pay,"</li><li> Instructions Word Count: ", length_inst, 
+              "</li><li>Number of Required Fields per Task: ", vpa, "</li></ul></div>")
+      }else{
+        paste("<div class=\"alert\">", "<p><big>Job Settings &amp; Design Concerns:</big></p>", 
+              pay_warning, inst_message, unit_warning, "</div>")
+      }
+    }
+  })
+  
   
   output$job_settings_overview <- renderText({
     if (input$get_job == 0 || input$job_id == 0) {
@@ -878,6 +1005,8 @@ shinyServer(function(input, output){
     dropouts = workers[4]
     onlookers = workers[5]
     
+    print("Number of workers available")
+    print(available)
     #reject_at = json$options$reject_at
     if(available < 100 || is.na(available) || is.null(available)){
       too_small = "<p><i class=\"icon-minus-sign\"></i> <b>Hold Up: The contributor pool for this job is very small. 
@@ -890,17 +1019,32 @@ shinyServer(function(input, output){
     total_worked = viable + maxed + tainted + dropouts + onlookers
     percent_viable = (viable/total_worked)*100
     percent_maxed = (maxed/total_worked) * 100
-    if(is.nan(percent_maxed)){
-      percent_maxed = 0
-    }
-    print("Percent Maxed")
-    print(percent_maxed)
     percent_tainted = (tainted/total_worked) * 100
     percent_dropouts = (dropouts/total_worked) * 100
     percent_onlookers = (onlookers/total_worked) * 100
     
+    if(is.nan(percent_viable) || is.infinite(percent_viable)){
+      percent_viable = 0
+    }
+    
+    if(is.nan(percent_maxed) || is.infinite(percent_maxed)){
+      percent_maxed = 0
+    }
+    
+    if(is.nan(percent_tainted) || is.infinite(percent_tainted)){
+      percent_tainted = 0
+    }
+    
+    if(is.nan(percent_dropouts) || is.infinite(percent_dropouts)){
+      percent_dropouts = 0
+    }
+    
+    if(is.nan(percent_onlookers) || is.infinite(percent_onlookers)){
+      percent_onlookers = 0
+    }
+    
     if(percent_tainted > 35){
-      failure_message = "<p><i class=\"icon-remove-sign\"></i> Ah oh: We're getting a lot of failures in quiz and
+      failure_message = "<p><i class=\"icon-remove-sign\"></i> Ah oh: We're getting a lot of failures in
       work mode. You may want to check on the Test Questions and the reject_at rate.</p>"
     } else {
       failure_message = ""
@@ -946,17 +1090,20 @@ shinyServer(function(input, output){
     total_worked = viable + maxed + tainted + dropouts + onlookers
     percent_viable = (viable/total_worked)*100
     percent_dropouts = (dropouts/total_worked) * 100
-    if(percent_dropouts == Inf){
+    percent_onlookers = (onlookers/total_worked) * 100
+    
+    if(is.nan(percent_viable) || is.infinite(percent_viable)){
+      percent_viable = 0
+    }
+    
+    if(is.nan(percent_dropouts) || is.infinite(percent_dropouts)){
       percent_dropouts = 0
     }
-    print("Percent Dropouts")
-    print(percent_dropouts)
-    percent_onlookers = (onlookers/total_worked) * 100
-    if(percent_onlookers == -Inf){
+    
+    if(is.nan(percent_onlookers) || is.infinite(percent_onlookers)){
       percent_onlookers = 0
     }
-    print("Percent Onlookers")
-    print(percent_onlookers)
+    
     
     if(percent_viable < 20){
       viable_message = "<p>Careful: Looks like your group of active contributors is dwindling.</p>"
