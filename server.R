@@ -864,25 +864,19 @@ shinyServer(function(input, output){
   })
   
   output$throughput_errors <- renderText({
-    #if (input$get_job == 0 || input$job_id == 0) {
-    # User has not uploaded a file yet
-    #  return("<p>No job data to return.</p>")
-    #} else {
-    #json = get_job_settings_from_json()
-    available = 99
-    #get_worker_intersect()
-    maxed = 20 
-    #get_maxed_out()
-    tainted = 10
-    #get_tainted()
-    qm_fail = 15
-    #get_qm_failures()
-    dropouts = 20
-    #get_dropouts() 
-    onlookers = 20
-    #get_onlookers()
-    viable = 10
-    #get_viable() 
+    if (input$get_job == 0 || input$job_id == 0) {
+      return("<p>Awaiting Data.</p>")
+    } else {
+    workers = get_state_counts()
+    #all_v = c(maxed_out, working, tainted, checked_out, not_in_yet)
+    
+    available = as.numeric(get_everyone_available())
+    
+    maxed =  workers[1]
+    viable = workers[2]
+    tainted = workers[3]
+    dropouts = workers[4]
+    onlookers = workers[5]
     
     #reject_at = json$options$reject_at
     if(available < 100 || is.na(available) || is.null(available)){
@@ -893,22 +887,26 @@ shinyServer(function(input, output){
       too_small=""
     }
     
-    total_worked = viable + maxed + tainted + qm_fail + dropouts + onlookers
+    total_worked = viable + maxed + tainted + dropouts + onlookers
     percent_viable = (viable/total_worked)*100
     percent_maxed = (maxed/total_worked) * 100
+    if(is.nan(percent_maxed)){
+      percent_maxed = 0
+    }
+    print("Percent Maxed")
+    print(percent_maxed)
     percent_tainted = (tainted/total_worked) * 100
-    percent_qm_fail = (qm_fail/total_worked) * 100
     percent_dropouts = (dropouts/total_worked) * 100
     percent_onlookers = (onlookers/total_worked) * 100
     
-    if(percent_tainted + percent_qm_fail > 0){
+    if(percent_tainted > 35){
       failure_message = "<p><i class=\"icon-remove-sign\"></i> Ah oh: We're getting a lot of failures in quiz and
       work mode. You may want to check on the Test Questions and the reject_at rate.</p>"
     } else {
       failure_message = ""
     }
     
-    if(percent_maxed > 0){
+    if(percent_maxed > 50){
       maxed_message = "<p><i class=\"icon-resize-full\"></i> Note: Over %50 of the workers in the job have maxed out. If the job is not near to finishing you may want to add more TQs or up the max work settings.</p>"
     } else {
       maxed_message = ""
@@ -917,45 +915,48 @@ shinyServer(function(input, output){
     if(too_small == "" && failure_message == "" && maxed_message == ""){
       paste("<p class=\"alert alert-success\">
              <i class=\"icon-ok\"></i>
-             <big>Throughput Contributor Errors:</big>
-             <br>We did not detect any obvious errors.</p>")
+             <big>Throughput Contributor Concerns:</big>
+             <br>We did not detect any obvious concerns/issues.</p>")
     } else {
       paste("<div class=\"alert alert-error\">", "<p><big>Throughput Contributor Errors:</big></p>",
             too_small, failure_message, maxed_message, "</div>")
     }
-    #}
-    
+   } 
   })
   
   output$throughput_warnings <- renderText({
-    #if (input$get_job == 0 || input$job_id == 0) {
+    if (input$get_job == 0 || input$job_id == 0) {
     # User has not uploaded a file yet
-    #  return("<p>No job data to return.</p>")
-    #} else {
+      return("<p>Waiting for Data.</p>")
+    } else {
+    workers = get_state_counts()
+    #all_v = c(maxed_out, working, tainted, checked_out, not_in_yet)
     
-    #json = get_job_settings_from_json()
-    available = 99
-    #get_worker_intersect()
-    maxed = 20 
-    #get_maxed_out()
-    tainted = 10
-    #get_tainted()
-    qm_fail = 15
-    #get_qm_failures()
-    dropouts = 20
-    #get_dropouts() 
-    onlookers = 20
-    #get_onlookers()
-    viable = 10
-    #get_viable() 
+    #available = as.numeric(get_everyone_available)
     
-    total_worked = viable + maxed + tainted + qm_fail + dropouts + onlookers
+    maxed =  workers[1]
+    viable = workers[2]
+    tainted = workers[3]
+    dropouts = workers[4]
+    onlookers = workers[5]
+    
+    #quiz mode failures have not been pulled
+    #qm_fail = 15
+    
+    total_worked = viable + maxed + tainted + dropouts + onlookers
     percent_viable = (viable/total_worked)*100
-    percent_maxed = (maxed/total_worked) * 100
-    percent_tainted = (tainted/total_worked) * 100
-    percent_qm_fail = (qm_fail/total_worked) * 100
     percent_dropouts = (dropouts/total_worked) * 100
+    if(percent_dropouts == Inf){
+      percent_dropouts = 0
+    }
+    print("Percent Dropouts")
+    print(percent_dropouts)
     percent_onlookers = (onlookers/total_worked) * 100
+    if(percent_onlookers == -Inf){
+      percent_onlookers = 0
+    }
+    print("Percent Onlookers")
+    print(percent_onlookers)
     
     if(percent_viable < 20){
       viable_message = "<p>Careful: Looks like your group of active contributors is dwindling.</p>"
@@ -972,14 +973,15 @@ shinyServer(function(input, output){
     if(viable_message == "" && lookers_message == ""){
       paste("<p class=\"alert alert-success\">
              <i class=\"icon-ok\"></i>
-             <big>Throughput Contributor Warnings:</big>
-             <br>We did not detect any obvious errors.</p>")
+             <big>Throughput Contributor Cautions:</big>
+             <br>We do not have any suggestions at this time. Make sure to review any issues in the Throughput
+             Contributor Errors section above.</p>")
     } else {
       paste("<div class=\"alert\">", "<p><big>Throughput Contributor Cautions:</big></p>",
             viable_message, lookers_message, "</div>")
     }
-    #}
-  })
+  }
+ })
   
   output$quality_gold_errors <- renderText({
     #if (input$get_job == 0 || input$job_id == 0) {
