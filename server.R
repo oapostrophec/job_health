@@ -54,8 +54,8 @@ instructions_length <- function(json_instructions){
 shinyServer(function(input, output){
   
   output$renderLogo <- renderText({
-    image_path = "http://cf-public-view.s3.amazonaws.com/coolstuff/cf_logo_blue.png"
-    html_image = paste("<img class=\"img-circle\" src=", image_path, " width=\"55%\"/>", sep="")
+    image_path = "http://cf-public-view.s3.amazonaws.com/coolstuff/electrical-heart-monitor.jpg"
+    html_image = paste("<img src=", image_path, " width=\"80%\"/>", sep="")
     paste(html_image)
   }) 
   
@@ -64,7 +64,7 @@ shinyServer(function(input, output){
     if(input$get_job == 0){
       return(NULL)
     }else{
-      output="Account Summary Info Here:"
+      output="<p><b>Pending Account Profile</b></p>"
     }
     
   })
