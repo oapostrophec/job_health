@@ -57,7 +57,7 @@ everyone_available_query <- function(countries_include, countries_exclude, skill
    group by profiles_contributors.builder_contributor_id
    having count(skill_id) >= "
     skill_counts = min_score
-    skill_restriction_block = paste0(part1, skill_level, part2, skill_counts)
+    skill_restriction_block = paste0(part1, skill_level, part2, skill_counts, "  ) ")
   } else {
     skill_restriction_block = ""
   }
@@ -66,7 +66,7 @@ everyone_available_query <- function(countries_include, countries_exclude, skill
   count(*)
   from builder_conversions
   where finished_at > GETDATE() - INTERVAL '2 weeks' "
-  last_part = "  )
+  last_part = "
   group by worker_id
   )"
   query = paste(part1, countries_include_line, countries_exclude_line,
