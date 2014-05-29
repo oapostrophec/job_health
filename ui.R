@@ -48,6 +48,7 @@ shinyUI(pageWithSidebar(
              ),
     tabPanel("Detected Job Flaws",
              div(htmlOutput("job_settings_warnings"), class="span10"),
+             div(htmlOutput("job_settings_cautions"), class="span10"),
              div(htmlOutput("job_settings_overview"), class="span11 alert alert-info")
              #showOutput("throughput_bar", "highcharts")
              #showOutput("tainted_bar",  "highcharts"),

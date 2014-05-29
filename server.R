@@ -14,6 +14,7 @@ library('rjson')
 require('rCharts')
 
 source('get_job_data.R')
+source('get_unit_data.R')
 #source('get_judgment_data.R')
 #source('get_country_data.R')
 source('get_channel_data.R')
@@ -57,16 +58,6 @@ shinyServer(function(input, output){
     html_image = paste("<img class=\"img-circle\" src=", image_path, " width=\"55%\"/>", sep="")
     paste(html_image)
   }) 
-  
-  output$jobSummary <- renderText({
-    #if(input$get_job == 0 && input$get_email == 0){
-    if(input$get_job ==0){
-      return(NULL)
-    }else{
-      output="Job Summary Info Here:"
-    }
-    
-  })
   
   output$accountSummary <- renderText({
     #if(input$get_job == 0 && input$get_email == 0){
@@ -124,10 +115,7 @@ shinyServer(function(input, output){
                     format(Sys.time(), "%b_%d_%X_%Y"),
                     ".csv")
       data = run_this_query(db, query, file)
-      print("line 118")
-      print("Workset server Line 1117")
-      print(names(data))
-      print(head(data))
+      
       data
     }
   })
@@ -150,6 +138,28 @@ shinyServer(function(input, output){
                       ".csv")
         data = run_this_query(db, query, file)
         data
+      }
+    }
+  })
+  
+  pull_unit_data <- reactive({
+    if(input$get_job == 0){
+      return(NULL)
+    }else{
+      job_id = input$job_id
+      if (job_id == 0) {
+        return(NULL)
+      }else{
+       print("in pull_unit_data")
+       db = db_call
+       query = get_unit_data(job_id) 
+       file = paste0(temp_dir,"/",
+                     "builder_units", "_", job_id, "_",
+                     format(Sys.time(), "%b_%d_%X_%Y"),
+                     ".csv")
+       data = run_this_query(db, query, file)
+       data
+        
       }
     }
   })
@@ -203,7 +213,6 @@ shinyServer(function(input, output){
                       format(Sys.time(), "%b_%d_%X_%Y"),
                       ".csv")
         data = run_this_query(db, query, file)
-        print(head(data))
         data
       } 
     }
@@ -240,7 +249,6 @@ shinyServer(function(input, output){
                       format(Sys.time(), "%b_%d_%X_%Y"),
                       ".csv")
         data = run_this_query(db, query, file)
-        print(head(data))
         data
       } 
     }
@@ -261,7 +269,7 @@ shinyServer(function(input, output){
                       format(Sys.time(), "%b_%d_%X_%Y"),
                       ".csv")
         data = run_this_query(db, query, file)
-        print(head(data))
+        
         data
       } 
     }
@@ -309,14 +317,30 @@ shinyServer(function(input, output){
       return(NULL)
     } else {
       maxed_out = as.numeric(get_num_maxed_out())
+      if(is.na(maxed_out)){
+        maxed_out = 0
+      }
       print(310)
       working = nrow(pull_judgment_counts())
+      if(is.na(working)){
+        working = 0
+      }
       print(312)
       tainted = sum(pull_tainted_breakdown_data()$y)
+      if(is.na(tainted)){
+        tainted = 0
+      }
       print(314)
       checked_out = as.numeric(get_number_checked_out())
+      if(is.na(checked_out)){
+        checked_out = 0
+      }
       print(316)
       all_available_workers = as.numeric(get_everyone_available())
+      if(is.na(all_available_workers)){
+        all_available_workers = 0
+      }
+      
       not_in_yet = all_available_workers - (maxed_out + working + tainted + checked_out)
       all_v = c(maxed_out, working, tainted, checked_out, not_in_yet)
       return(all_v)
@@ -579,53 +603,66 @@ shinyServer(function(input, output){
       return("<p>No job data to return.</p>")
     } else {
       #Data to grab
-      json = get_job_settings_from_json()
-      workset = pull_workset_data()
-      workset = as.data.frame(workset)
+   json = get_job_settings_from_json()
+    #workset = pull_workset_data()
+    #workset = as.data.frame(workset)
       
-      #Variables to Display
-      job_title = json$title 
-      job_state = json$state
-      support_email = json$support_email
-      num_gold_units = json$golds_count
-      num_nongold_units = json$units_count - json$golds_count
+   units = pull_unit_data()
       
-      total_judgments = sum(workset$judgments_count - workset$golds_count)
+    #Variables to Display
+   job_title = json$title 
+   job_state = json$state
+    #support_email = json$support_email
+    #num_gold_units = json$golds_count
+    #num_nongold_units = json$units_count - json$golds_count
+   inprogress_new_units = units[units$state < 6,]
       
-      print("workset is:")
-      print(head(workset))
+   enabled_golds = units[units$state == 6,]
+   disabled_golds = units[units$state == 7,]
       
-      tainted_work = 
-        workset[workset$tainted == "t",]
-        
-      untrusted_all = sum(tainted_work$judgments_count)
-      untrusted_golds = sum(tainted_work$golds_count)
+   canceled_units = units[units$state == 8,]
+   finalized_units = units[units$state == 9,]
       
-      untrusted_judgments = untrusted_all - untrusted_golds
-      trusted_judgments = total_judgments - untrusted_judgments
+   num_gold_units = nrow(enabled_golds)
+   num_disabled_golds = nrow(disabled_golds)
+   num_finalized_units = nrow(finalized_units)
+   num_new_units = nrow(inprogress_new_units)
+   num_canceled_units = nrow(canceled_units)
       
-      if (num_gold_units == 0) {
-        gold_message = "<p style='color:red;'>It looks like there are NOT any <b>TQs</b> in this job. 
-                        Unless this is a survey job or a doublepass job, 
-                        they should use test questions.</p>"
-      } else {
-        gold_message = ""
-      }
+    #total_judgments = sum(workset$judgments_count - workset$golds_count)      
+    #tainted_work = 
+    #  workset[workset$tainted == "t",]
       
-      overall_message = paste("<h5>Job Summary</h5>",
-                              "<ul class=\"unstyled\"><li>Job Title:<br>", job_title, "</li><br>",
-                              "<li>State: ", job_state, "</li>",
-                              "<li>Email: ", support_email, "</li>",
-                              "<li>Units: ", num_nongold_units, "</li>",
-                              "<li>Test Questions: ", num_gold_units, "</li><br>",
-                              "<li>Total Judgments: ", total_judgments, "</li>",
-                              "<li>Untrusted Judgments: ", untrusted_judgments, "</li>",
-                              "<li>Trusted Judgments: ", trusted_judgments, "</li>",
-                              "</ul>", sep="")
+    #untrusted_all = sum(tainted_work$judgments_count)
+    #untrusted_golds = sum(tainted_work$golds_count)
       
-      paste(overall_message, gold_message)
-    } 
-  })
+    #untrusted_judgments = untrusted_all - untrusted_golds
+    #trusted_judgments = total_judgments - untrusted_judgments
+           
+   if(num_canceled_units > 0){
+     canceled_message = paste("<li>Canceled Units: ", num_canceled_units, "</li>")
+   } else {
+     canceled_message = ""
+   }
+      
+   if(num_disabled_golds > 0){
+     tq_message = paste("<li> Enabled TQs: ", num_gold_units, "</li>",
+        "<li> Disabled TQs:", num_disabled_golds, "</li>")
+   } else {
+     tq_message = paste("<li> Test Questions: ", num_gold_units, "</li>")
+   }
+      
+   overall_message = paste("<h5>Job Summary</h5>",
+                            "<ul class=\"unstyled\"><li>Job Title:<br>", job_title, "</li><br>",
+                            "<li>State: ", job_state, "</li>",
+                            "<li>Finalized Units: ", num_finalized_units, "</li>",
+                            "<li>In Progress &amp; New Units: ", num_new_units, "</li>",
+                            canceled_message, tq_message,
+                            "</ul>", sep="")
+      
+    paste(overall_message)
+  } 
+ })
   
   output$job_settings_message <- renderText({
     if (input$get_job == 0 || input$job_id == 0) {
@@ -794,11 +831,6 @@ shinyServer(function(input, output){
       } 
       
       ##Level Mark Ups
-      print("level scores")
-      print(json$minimum_requirements$skill_scores$level_3_contributors)
-      print(json$minimum_requirements$skill_scores$level_2_contributors)
-      
-      
       if(!(is.null(json$minimum_requirements$skill_scores$level_3_contributors))){
         level_markup = .3
       }
@@ -891,20 +923,17 @@ shinyServer(function(input, output){
       
       id_speed = job$min_assignment_duration 
       id_flag = job$flag_on_min_assignment_duration 
-      if(id_flag == "t"){
-        id_flag = "TRUE"
-      } 
       
       if(id_flag == "f"){
         id_flag = "FALSE"
-      }
+      }else{
+        id_flag = "TRUE"
+      } 
       
       id_email = job$send_emails_on_rate_limit
       if(id_email == "t"){
         id_email = "TRUE"
-      }
-      
-      if(id_email == "f"){
+      } else {
         id_email = "FALSE"
       }
     
@@ -928,15 +957,6 @@ shinyServer(function(input, output){
       task_exp = as.double(task_exp)/60
       
       jpu = json$judgments_per_unit
-      fifo = job$schedule_fifo
-      if(fifo == "t"){
-        fifo = "TRUE"
-      }
-      
-      if(fifo == "f"){
-        fifo = "FALSE"
-      }
-      
       remain_finalized = json$units_remain_finalized
       variable_mode = json$variable_judgments_mode
       
@@ -996,7 +1016,6 @@ shinyServer(function(input, output){
     } else {
     workers = get_state_counts()
     #all_v = c(maxed_out, working, tainted, checked_out, not_in_yet)
-    
     available = as.numeric(get_everyone_available())
     
     maxed =  workers[1]
@@ -1042,6 +1061,13 @@ shinyServer(function(input, output){
     if(is.nan(percent_onlookers) || is.infinite(percent_onlookers)){
       percent_onlookers = 0
     }
+    
+    print("Percentages: viable, maxed, tainted, dropouts, onlookers")
+    print(percent_viable)
+    print(percent_maxed)
+    print(percent_tainted)
+    print(percent_dropouts)
+    print(percent_onlookers)
     
     if(percent_tainted > 35){
       failure_message = "<p><i class=\"icon-remove-sign\"></i> Ah oh: We're getting a lot of failures in
@@ -1130,50 +1156,84 @@ shinyServer(function(input, output){
   }
  })
   
-  output$quality_gold_errors <- renderText({
-    #if (input$get_job == 0 || input$job_id == 0) {
-    # User has not uploaded a file yet
-    #  return("<p>No job data to return.</p>")
-    #} else {
+ ###Quality Warnings
+ output$quality_gold_errors <- renderText({
+  if (input$get_job == 0 || input$job_id == 0) {
+     return("<p>Waiting to pull builder_units.</p>")
+  } else {
+    #Data to Grab
+    #json = get_job_settings_from_json()
+    units = pull_unit_data()
+    #gold answers - grab values per cml_name
+    print("Did you make it here? 1186")
+    enabled_golds = units[units$state == 6,]
+    print("ENABLED GOLDS")
+    print(enabled_golds)
     
-    i = 4
-    j = 5
+    disabled_golds = units[units$state == 7,]
+    print("DISABLED GOLDS")
+    print(disabled_golds)
+     
+    num_units = nrow(units)
+    num_golds = nrow(enabled_golds)
     
-    if(i < j){
-      tq_message = "<p><i class=\"icon-edit\"></i> Missed TQ's: There are quite a few test questions that are highly missed. 
-      We would update those before digging into Quality too much.</p>"
-    } else {
-      tq_message = ""
-    }
+    if(num_golds != 0){
+      enabled_golds$missed_percent = enabled_golds$missed_count/enabled_golds$judgments_count
+      enabled_golds$contested_percent = enabled_golds$contested_count/enabled_golds$missed_count
+      
+      highly_missed = enabled_golds[enabled_golds$missed_percent > .67,]
+      highly_contested = enabled_golds[enabled_golds$contested_percent > .50,]
+      
+      num_missed = nrow(enabled_golds[enabled_golds$missed_count > 0,])
+      
+      #More than 9% of golds are missed +67% of the time
+      if(nrow(highly_missed)/num_golds > .09){
+        tq_missed_message = "<p><i class=\"icon-edit\"></i> Missed TQ's: There are quite a few test questions that are highly missed. 
+        We would update those before digging into Quality too much.</p>"
+      } else {
+        tq_missed_message = ""
+      }
+     
+      #More than 19% of golds are contested +50% of the time
+      if(nrow(highly_contested)/num_missed > .19){
+        tq_contested_message = "<p><i class=\"icon-edit\"></i> Contested TQ's: There are quite a few missed test questions that are highly contested.</p>"
+      } else{
+        tq_contested_message = "" 
+      }
+ 
+      #Enough Golds
+      #wrt number of units for every 100 units there should be AT LEAST 10 units.
+      if(num_golds/num_units < .11){
+        enough_golds_message = "<p><i class=\"icon-list-alt\"></i> Careful: There are very few golds given the number of units. 
+        You may want to increase it.</p>"
+      } else {
+        enough_golds_message = ""
+      }
+ 
+      #Bad Validators
+      #If a gold answer does not match the validators (for text) or names/values (for non text)
+      #if(i < j){
+      #  validators_message = "<p><i class=\"icon-fire\"></i><b> WARNING! We detected that some of the answers provided in TQs DO NOT match the values provided in CML. 
+      #  Please pause and fix this before continuing.</b><p>"
+      #} else {
+      #  validators_message = ""
+      #}
     
-    #Enough Golds
-    #wrt number of units for every 100 units there should be AT LEAST 10 units.
-    if(i < j){
-      enough_golds_message = "<p><i class=\"icon-list-alt\"></i> Careful: There are very few golds given the number of units. 
-      You may want to increase it.</p>"
+      if(tq_missed_message == "" && enough_golds_message == "" && tq_contested_message == ""){
+        paste("<p class=\"alert alert-success\">
+             <i class=\"icon-ok\"></i>
+             <big>Gold Quality Warnings:</big>
+             <br>We did not detect any obvious errors.</p>")
+      } else {
+        paste("<div class=\"alert alert-error\">", "<p><big>Gold Quality Warnings:</big></p>",
+        tq_missed_message, tq_contested_message, enough_golds_message, "</div>")
+      }  
     } else {
-      enough_golds_message = ""
+      paste("<h4 class=\"alert alert-error\"> We've detected no enabled Test Questions in this task. Unless this
+            is a survey or a content creation job we highly suggest you use Test Questions.</h4>")
     }
-    
-    #Bad Validators
-    #If a gold answer does not match the validators (for text) or names/values (for non text)
-    if(i < j){
-      validators_message = "<p><i class=\"icon-fire\"></i><b> WARNING! We detected that some of the answers provided in TQs DO NOT match the values provided in CML. 
-      Please pause and fix this before continuing.</b><p>"
-    } else {
-      validators_message = ""
-    }
-    if(tq_message == "" && enough_golds_message == "" && validators_message == ""){
-      paste("<p class=\"alert alert-success\">
-              <i class=\"icon-ok\"></i>
-              <big>Gold Quality Warnings:</big>
-              <br>We did not detect any obvious errors.</p>")
-    } else {
-      paste("<div class=\"alert alert-error\">", "<p><big>Gold Quality Warnings:</big></p>",
-            validators_message, tq_message, enough_golds_message, "</div>")
-    }
-    #}
-  })
+  }
+})
   
   output$quality_times_warnings <- renderText({
     #if (input$get_job == 0 || input$job_id == 0) {
