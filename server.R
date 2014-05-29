@@ -1021,8 +1021,8 @@ shinyServer(function(input, output){
     maxed =  workers[1]
     viable = workers[2]
     tainted = workers[3]
-    dropouts = workers[4]
-    onlookers = workers[5]
+    check_out = workers[4]
+    dont_care = workers[5]
     
     print("Number of workers available")
     print(available)
@@ -1035,12 +1035,14 @@ shinyServer(function(input, output){
       too_small=""
     }
     
-    total_worked = viable + maxed + tainted + dropouts + onlookers
+    total_worked = viable + maxed + tainted + check_out
+    total = total_worked + dont_care
+    
     percent_viable = (viable/total_worked)*100
     percent_maxed = (maxed/total_worked) * 100
     percent_tainted = (tainted/total_worked) * 100
-    percent_dropouts = (dropouts/total_worked) * 100
-    percent_onlookers = (onlookers/total_worked) * 100
+    percent_check_out = (check_out/total_worked) * 100
+    percent_dont_care = (dont_care/total) * 100
     
     if(is.nan(percent_viable) || is.infinite(percent_viable)){
       percent_viable = 0
@@ -1054,20 +1056,13 @@ shinyServer(function(input, output){
       percent_tainted = 0
     }
     
-    if(is.nan(percent_dropouts) || is.infinite(percent_dropouts)){
-      percent_dropouts = 0
+    if(is.nan(percent_check_out) || is.infinite(percent_check_out)){
+      percent_check_out = 0
     }
     
-    if(is.nan(percent_onlookers) || is.infinite(percent_onlookers)){
-      percent_onlookers = 0
+    if(is.nan(percent_dont_care) || is.infinite(percent_dont_care)){
+      percent_dont_care = 0
     }
-    
-    print("Percentages: viable, maxed, tainted, dropouts, onlookers")
-    print(percent_viable)
-    print(percent_maxed)
-    print(percent_tainted)
-    print(percent_dropouts)
-    print(percent_onlookers)
     
     if(percent_tainted > 35){
       failure_message = "<p><i class=\"icon-remove-sign\"></i> Ah oh: We're getting a lot of failures in
@@ -1107,27 +1102,23 @@ shinyServer(function(input, output){
     maxed =  workers[1]
     viable = workers[2]
     tainted = workers[3]
-    dropouts = workers[4]
-    onlookers = workers[5]
+    check_out = workers[4]
+    dont_care = workers[5]
     
     #quiz mode failures have not been pulled
     #qm_fail = 15
-    
-    total_worked = viable + maxed + tainted + dropouts + onlookers
+    total_worked = viable + maxed + tainted + check_out
+    total = total_worked + dont_care
     percent_viable = (viable/total_worked)*100
-    percent_dropouts = (dropouts/total_worked) * 100
-    percent_onlookers = (onlookers/total_worked) * 100
+    percent_check_out = (check_out/total_worked) * 100
+    percent_dont_care = (dont_care/total) * 100
     
     if(is.nan(percent_viable) || is.infinite(percent_viable)){
       percent_viable = 0
     }
     
-    if(is.nan(percent_dropouts) || is.infinite(percent_dropouts)){
-      percent_dropouts = 0
-    }
-    
-    if(is.nan(percent_onlookers) || is.infinite(percent_onlookers)){
-      percent_onlookers = 0
+    if(is.nan(percent_check_out) || is.infinite(percent_check_out)){
+      percent_check_out = 0
     }
     
     
@@ -1137,13 +1128,20 @@ shinyServer(function(input, output){
       viable_message = ""
     }
     
-    if(percent_dropouts + percent_onlookers > 35){
+    if(percent_check_out > 35){
       lookers_message = "<p>Ah oh: We're seeing a high percentage of contributors just looking at the task or giving up after quiz mode. You may want to up the Payment per Task or broaden your contributor target.</p>"
     } else {
       lookers_message = ""
     }
     
-    if(viable_message == "" && lookers_message == ""){
+    if(percent_dont_care > 50){
+      dont_care_message ="<p>Yikes: Over 50% of people eligible for this job have not even looked at it. You
+       may want to increase the pay or make the job a little easier.</p>"
+    } else {
+      dont_care_message = ""
+    }
+    
+    if(viable_message == "" && lookers_message == "" && dont_care_message == ""){
       paste("<p class=\"alert alert-success\">
              <i class=\"icon-ok\"></i>
              <big>Throughput Contributor Cautions:</big>
@@ -1151,7 +1149,7 @@ shinyServer(function(input, output){
              Contributor Errors section above.</p>")
     } else {
       paste("<div class=\"alert\">", "<p><big>Throughput Contributor Cautions:</big></p>",
-            viable_message, lookers_message, "</div>")
+            viable_message, lookers_message, dont_care_message, "</div>")
     }
   }
  })
