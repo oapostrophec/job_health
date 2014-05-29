@@ -867,12 +867,12 @@ shinyServer(function(input, output){
       find_validates = "validates=\"(\\w|:|\\[|\\]|\\'|\\,|\\{|\\})*\\s?(required)"
       count_validates = str_count(cml, pattern=find_validates)
       vpa = upa * count_validates
-      if(vpa > 19){
+      if(vpa > 20){
         unit_warning = paste("<p><u>Long Task Warning</u>: Careful, we found an exorbitant amount of required fields in one task. 
                              You may want to decrease the Units per Task. 
                              If this is an image moderations type task you may ignore this message.</p>", 
                              "<p><b>Number of Required Fields per Task:</b>", vpa,"</p>")
-      } else if(vpa < 6){
+      } else if(vpa < 5){
         unit_warning = paste("<p><u>Short Task Warning</u>: Careful, it seems like there are not many required fields per task. 
                              You may want to up the Units per Task setting to get more bang for your buck.</p>", 
                              "<p><b>Number of Required Fields per Task:</b>", vpa,"</p>")
@@ -1184,8 +1184,8 @@ shinyServer(function(input, output){
       
       num_missed = nrow(enabled_golds[enabled_golds$missed_count > 0,])
       
-      #More than 9% of golds are missed +67% of the time
-      if(nrow(highly_missed)/num_golds > .09){
+      #More than 19% of golds are missed +67% of the time
+      if(nrow(highly_missed)/num_golds > .19){
         tq_missed_message = "<p><i class=\"icon-edit\"></i> Missed TQ's: There are quite a few test questions that are highly missed. 
         We would update those before digging into Quality too much.</p>"
       } else {
@@ -1201,7 +1201,7 @@ shinyServer(function(input, output){
  
       #Enough Golds
       #wrt number of units for every 100 units there should be AT LEAST 10 units.
-      if(num_golds/num_units < .11){
+      if(num_golds/num_units < .11 && num_golds < 100){
         enough_golds_message = "<p><i class=\"icon-list-alt\"></i> Careful: There are very few golds given the number of units. 
         You may want to increase it.</p>"
       } else {
