@@ -356,15 +356,15 @@ shinyServer(function(input, output){
       state_counts = get_state_counts() 
       print(337)
       responses_table_transformed = data.frame(group=states,
-                                               y = state_counts, # these are the numbers found in groups
-                                               x=rep(as.character(job_id),times=5), # this is a fake grouping variable
-                                               preserve_order = 1:5,
-                                               info = c("<b>Maxed out</b>",
-                                                        "<b>Active workers who can still make more judgments</b>",
-                                                        "<b>Tainted workers</b>",
-                                                        "<b>Checked the job out, didn't make judgments</b>",
-                                                        "<b>Never entered the job</b>"), # this is a vector of html vars describing tooltips
-                                               click_action = div_names
+                              y = state_counts, # these are the numbers found in groups
+                              x=rep(as.character(job_id),times=5), # this is a fake grouping variable
+                              preserve_order = 1:5,
+                              info = c("<b>Maxed out</b>",
+                                       "<b>Active workers who can still make more judgments</b>",
+                                       "<b>Tainted workers</b>",
+                                       "<b>Checked the job out, didn't make judgments</b>",
+                                       "<b>Never entered the job</b>"), # this is a vector of html vars describing tooltips
+                                        click_action = div_names
       )
       
       
@@ -736,6 +736,133 @@ shinyServer(function(input, output){
     }
   })
   
+  output$job_settings_cautions <- renderText({
+    if (input$get_job == 0 || input$job_id == 0) {
+      return("<p>Waiting to pull job json.</p>")
+    } else {
+      
+      #Data to Grab
+      json = get_job_settings_from_json()
+      #gold answers - grab values per cml_name
+      
+      #Grab Elements
+      cml = json$cml
+      instructions = json$instructions
+      actual_pay = json$payment_cents
+      upa = json$units_per_assignment
+      
+      #instructions length
+      length_inst = instructions_length(instructions)
+      
+      if(length_inst > 1000){
+        inst_message = paste("<p><u>TLDR Warning</u>: The instructions seem pretty long. 
+                       Make sure this job cannot be broken down into simplier parts. 
+                       Or add essential tips and tricks into the task itself.</p>",
+                      "<p><b>Instructions Word Count</b>:", length_inst,"</p>")
+      } else if(length_inst < 100){
+        inst_message = paste("<p><u>Edge Case Warning</u>: These instructions are super short. 
+                       Are you sure you covered all your cases in the examples section of the instructions? 
+                       You can ignore this warning if the task is a survey.</p>",
+                       "<p><b>Instructions Word Count</b>:", length_inst,"</p>")
+      } else{
+        inst_message = ""
+      }
+      
+      #html errors
+      
+      #Bad Pricing - based on calculator
+      find_texts = '<cml:text(area)?(\\s|\\w|=|:|\"|\\[|\'|\\,|\\]|\\{|\\})*(required)'
+      find_clicks = 'href=\\"https?://'
+      #search number is a subset of clicks
+      find_search = 'href=\\"https?://(\\w|\\.|/)+(search)'
+      
+      click_markup = 0
+      search_markup = 0
+      text_markup = 0
+      level_markup = 0
+      
+      if(str_detect(cml, pattern=find_search)){
+        search_markup = .7
+      }
+      
+      if(str_detect(cml, pattern=find_clicks) && !(str_detect(cml, pattern=find_search))){
+        click_markup = .2	
+      }
+      
+      if(str_detect(cml, pattern=find_texts)){
+        text_markup = .3
+      } 
+      
+      ##Level Mark Ups
+      print("level scores")
+      print(json$minimum_requirements$skill_scores$level_3_contributors)
+      print(json$minimum_requirements$skill_scores$level_2_contributors)
+      
+      
+      if(!(is.null(json$minimum_requirements$skill_scores$level_3_contributors))){
+        level_markup = .3
+      }
+      
+      if(!(is.null(json$minimum_requirements$skill_scores$level_2_contributors))){
+        level_markup = .2
+      }
+      
+      pay_per_unit = 1 + click_markup + search_markup + text_markup + level_markup
+      suggested_pay = upa * pay_per_unit
+      
+      error = abs((suggested_pay - actual_pay)/suggested_pay)
+      direction = suggested_pay - actual_pay
+      if(error > .25){
+        if(direction < 0){
+          pay_warning = paste("<p><u>Over Payment Caution</u>: We believe you might be overpaying for this type of task. 
+          If you are getting the results you want within your expected cost then you may ignore this message. 
+          If not we suggest you pause the job and recalibrate the payments.</p>", "<p><b>Current Pay per Task:</b>",
+            actual_pay, "<br><b>Suggested Pay per Task:</b>", suggested_pay, "</p>")
+        }
+        if(direction > 0){
+          pay_warning = paste("<p><u>Under Payment Warning</u>: We believe based on the requirements of this task and 
+          the size of a single task that you are under paying. Please consider increasing the contributor pay or 
+          decreasing the assignment size.</p>", "<p><b>Current Pay per Task:</b>", actual_pay, "<br><b>Suggested Pay per Task:</b>", 
+          suggested_pay, "</p>")
+        }
+      } else {
+        pay_warning = ""
+      }
+      
+      
+      #Units per Assignment - based on calculator
+      #Count validated fields number of fields
+      find_validates = "validates=\"(\\w|:|\\[|\\]|\\'|\\,|\\{|\\})*\\s?(required)"
+      count_validates = str_count(cml, pattern=find_validates)
+      vpa = upa * count_validates
+      if(vpa > 19){
+        unit_warning = paste("<p><u>Long Task Warning</u>: Careful, we found an exorbitant amount of required fields in one task. 
+                             You may want to decrease the Units per Task. 
+                             If this is an image moderations type task you may ignore this message.</p>", 
+                             "<p><b>Number of Required Fields per Task:</b>", vpa,"</p>")
+      } else if(vpa < 6){
+        unit_warning = paste("<p><u>Short Task Warning</u>: Careful, it seems like there are not many required fields per task. 
+                             You may want to up the Units per Task setting to get more bang for your buck.</p>", 
+                             "<p><b>Number of Required Fields per Task:</b>", vpa,"</p>")
+      } else {
+        unit_warning =""
+      }
+      
+      if(pay_warning == "" && inst_message == "" && unit_warning == ""){
+        paste("<div class=\"alert alert-success\"><p><i class=\"icon-ok\"></i>
+              <big>Job Settings &amp; Design Concerns:</big>
+              <br>We do not have any suggestions on approving job design. 
+              Make sure to check the Job Settings Error section above before moving on.</p>",
+              "<ul class=\"unstyled\"><li>Suggested Pay: ", suggested_pay, " Actual Pay: ",
+              actual_pay,"</li><li> Instructions Word Count: ", length_inst, 
+              "</li><li>Number of Required Fields per Task: ", vpa, "</li></ul></div>")
+      }else{
+        paste("<div class=\"alert\">", "<p><big>Job Settings &amp; Design Concerns:</big></p>", 
+              pay_warning, inst_message, unit_warning, "</div>")
+      }
+    }
+  })
+  
   
   output$job_settings_overview <- renderText({
     if (input$get_job == 0 || input$job_id == 0) {
@@ -864,26 +991,22 @@ shinyServer(function(input, output){
   })
   
   output$throughput_errors <- renderText({
-    #if (input$get_job == 0 || input$job_id == 0) {
-    # User has not uploaded a file yet
-    #  return("<p>No job data to return.</p>")
-    #} else {
-    #json = get_job_settings_from_json()
-    available = 99
-    #get_worker_intersect()
-    maxed = 20 
-    #get_maxed_out()
-    tainted = 10
-    #get_tainted()
-    qm_fail = 15
-    #get_qm_failures()
-    dropouts = 20
-    #get_dropouts() 
-    onlookers = 20
-    #get_onlookers()
-    viable = 10
-    #get_viable() 
+    if (input$get_job == 0 || input$job_id == 0) {
+      return("<p>Awaiting Data.</p>")
+    } else {
+    workers = get_state_counts()
+    #all_v = c(maxed_out, working, tainted, checked_out, not_in_yet)
     
+    available = as.numeric(get_everyone_available())
+    
+    maxed =  workers[1]
+    viable = workers[2]
+    tainted = workers[3]
+    dropouts = workers[4]
+    onlookers = workers[5]
+    
+    print("Number of workers available")
+    print(available)
     #reject_at = json$options$reject_at
     if(available < 100 || is.na(available) || is.null(available)){
       too_small = "<p><i class=\"icon-minus-sign\"></i> <b>Hold Up: The contributor pool for this job is very small. 
@@ -893,22 +1016,41 @@ shinyServer(function(input, output){
       too_small=""
     }
     
-    total_worked = viable + maxed + tainted + qm_fail + dropouts + onlookers
+    total_worked = viable + maxed + tainted + dropouts + onlookers
     percent_viable = (viable/total_worked)*100
     percent_maxed = (maxed/total_worked) * 100
     percent_tainted = (tainted/total_worked) * 100
-    percent_qm_fail = (qm_fail/total_worked) * 100
     percent_dropouts = (dropouts/total_worked) * 100
     percent_onlookers = (onlookers/total_worked) * 100
     
-    if(percent_tainted + percent_qm_fail > 0){
-      failure_message = "<p><i class=\"icon-remove-sign\"></i> Ah oh: We're getting a lot of failures in quiz and
+    if(is.nan(percent_viable) || is.infinite(percent_viable)){
+      percent_viable = 0
+    }
+    
+    if(is.nan(percent_maxed) || is.infinite(percent_maxed)){
+      percent_maxed = 0
+    }
+    
+    if(is.nan(percent_tainted) || is.infinite(percent_tainted)){
+      percent_tainted = 0
+    }
+    
+    if(is.nan(percent_dropouts) || is.infinite(percent_dropouts)){
+      percent_dropouts = 0
+    }
+    
+    if(is.nan(percent_onlookers) || is.infinite(percent_onlookers)){
+      percent_onlookers = 0
+    }
+    
+    if(percent_tainted > 35){
+      failure_message = "<p><i class=\"icon-remove-sign\"></i> Ah oh: We're getting a lot of failures in
       work mode. You may want to check on the Test Questions and the reject_at rate.</p>"
     } else {
       failure_message = ""
     }
     
-    if(percent_maxed > 0){
+    if(percent_maxed > 50){
       maxed_message = "<p><i class=\"icon-resize-full\"></i> Note: Over %50 of the workers in the job have maxed out. If the job is not near to finishing you may want to add more TQs or up the max work settings.</p>"
     } else {
       maxed_message = ""
@@ -917,45 +1059,51 @@ shinyServer(function(input, output){
     if(too_small == "" && failure_message == "" && maxed_message == ""){
       paste("<p class=\"alert alert-success\">
              <i class=\"icon-ok\"></i>
-             <big>Throughput Contributor Errors:</big>
-             <br>We did not detect any obvious errors.</p>")
+             <big>Throughput Contributor Concerns:</big>
+             <br>We did not detect any obvious concerns/issues.</p>")
     } else {
       paste("<div class=\"alert alert-error\">", "<p><big>Throughput Contributor Errors:</big></p>",
             too_small, failure_message, maxed_message, "</div>")
     }
-    #}
-    
+   } 
   })
   
   output$throughput_warnings <- renderText({
-    #if (input$get_job == 0 || input$job_id == 0) {
+    if (input$get_job == 0 || input$job_id == 0) {
     # User has not uploaded a file yet
-    #  return("<p>No job data to return.</p>")
-    #} else {
+      return("<p>Waiting for Data.</p>")
+    } else {
+    workers = get_state_counts()
+    #all_v = c(maxed_out, working, tainted, checked_out, not_in_yet)
     
-    #json = get_job_settings_from_json()
-    available = 99
-    #get_worker_intersect()
-    maxed = 20 
-    #get_maxed_out()
-    tainted = 10
-    #get_tainted()
-    qm_fail = 15
-    #get_qm_failures()
-    dropouts = 20
-    #get_dropouts() 
-    onlookers = 20
-    #get_onlookers()
-    viable = 10
-    #get_viable() 
+    #available = as.numeric(get_everyone_available)
     
-    total_worked = viable + maxed + tainted + qm_fail + dropouts + onlookers
+    maxed =  workers[1]
+    viable = workers[2]
+    tainted = workers[3]
+    dropouts = workers[4]
+    onlookers = workers[5]
+    
+    #quiz mode failures have not been pulled
+    #qm_fail = 15
+    
+    total_worked = viable + maxed + tainted + dropouts + onlookers
     percent_viable = (viable/total_worked)*100
-    percent_maxed = (maxed/total_worked) * 100
-    percent_tainted = (tainted/total_worked) * 100
-    percent_qm_fail = (qm_fail/total_worked) * 100
     percent_dropouts = (dropouts/total_worked) * 100
     percent_onlookers = (onlookers/total_worked) * 100
+    
+    if(is.nan(percent_viable) || is.infinite(percent_viable)){
+      percent_viable = 0
+    }
+    
+    if(is.nan(percent_dropouts) || is.infinite(percent_dropouts)){
+      percent_dropouts = 0
+    }
+    
+    if(is.nan(percent_onlookers) || is.infinite(percent_onlookers)){
+      percent_onlookers = 0
+    }
+    
     
     if(percent_viable < 20){
       viable_message = "<p>Careful: Looks like your group of active contributors is dwindling.</p>"
@@ -972,14 +1120,15 @@ shinyServer(function(input, output){
     if(viable_message == "" && lookers_message == ""){
       paste("<p class=\"alert alert-success\">
              <i class=\"icon-ok\"></i>
-             <big>Throughput Contributor Warnings:</big>
-             <br>We did not detect any obvious errors.</p>")
+             <big>Throughput Contributor Cautions:</big>
+             <br>We do not have any suggestions at this time. Make sure to review any issues in the Throughput
+             Contributor Errors section above.</p>")
     } else {
       paste("<div class=\"alert\">", "<p><big>Throughput Contributor Cautions:</big></p>",
             viable_message, lookers_message, "</div>")
     }
-    #}
-  })
+  }
+ })
   
   output$quality_gold_errors <- renderText({
     #if (input$get_job == 0 || input$job_id == 0) {
@@ -991,7 +1140,7 @@ shinyServer(function(input, output){
     j = 5
     
     if(i < j){
-      tq_message = "<p><i class=\"icon-edit\"></i> Eek: There are quite a few test questions that are highly missed. 
+      tq_message = "<p><i class=\"icon-edit\"></i> Missed TQ's: There are quite a few test questions that are highly missed. 
       We would update those before digging into Quality too much.</p>"
     } else {
       tq_message = ""
@@ -1009,8 +1158,8 @@ shinyServer(function(input, output){
     #Bad Validators
     #If a gold answer does not match the validators (for text) or names/values (for non text)
     if(i < j){
-      validators_message = "<p><i class=\"icon-fire\"></i><big> WARNING! We detected that some of the answers provided in TQs DO NOT match the values provided in CML. 
-      Please pause and fix this before continuing.</big><p>"
+      validators_message = "<p><i class=\"icon-fire\"></i><b> WARNING! We detected that some of the answers provided in TQs DO NOT match the values provided in CML. 
+      Please pause and fix this before continuing.</b><p>"
     } else {
       validators_message = ""
     }
