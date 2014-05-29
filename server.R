@@ -1472,6 +1472,8 @@ tainted_bar <- reactive({
         h1$series(data = x, type = "column", name = x[[1]]$group)
       }
       ))
+      h1$tooltip(useHTML = T, formatter = 
+                   "#! function() { return('<b>' + this.point.group + '</b><br>' + 'Num workers: ' + this.point.y); } !#")
       h1$addParams(dom = 'tainted_bar')
       print(688)
       print(h1)
@@ -1642,18 +1644,19 @@ pull_speed_violations <- reactive({
                                                    workers_with_judgments$worker_id)
       
       
-      #workers_with_judgments$worker_id = as.character(workers_with_judgments$worker_id)
+      workers_with_judgments$worker_id = as.character(workers_with_judgments$worker_id)
       #       h1 <- hPlot(judgments_count ~ worker_id,
       #                   data = workers_with_judgments, 
       #                   type = c("column"),
       #                   name="")
       
-      workers_with_judgments$x = workers_with_judgments$index # for proper ordering of bars
+      
+      workers_with_judgments$x = workers_with_judgments$worker_id # for proper ordering of bars
       workers_with_judgments$y = workers_with_judgments$judgments_count
       
       h1 <- rCharts::Highcharts$new()
       workers_with_judgments = lapply(split(workers_with_judgments, 
-                                            rownames(workers_with_judgments)), as.list)
+                                            1:nrow(workers_with_judgments)), as.list)
       names(workers_with_judgments) = NULL
       print("Line 907")
       print(workers_with_judgments[[1]])
@@ -1665,7 +1668,7 @@ pull_speed_violations <- reactive({
           cursor = 'pointer',
           events = list(
             click = 
-              "#! function() { window.open(this.options.data[0].click_action); } !#"
+              "#! function() { window.open(this.point.click_action); } !#"
           )
         )
       )
