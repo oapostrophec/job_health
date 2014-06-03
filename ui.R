@@ -16,7 +16,8 @@ shinyUI(pageWithSidebar(
     # <span class=\"span3\"><button id=\"get_email\" type=\"button\" class=\"btn btn-info action-button shiny-bound-input\">
     # Submit</button></span></div>'),
     div(htmlOutput("job_summary_message"), class="span10"),
-    tags$style(type="text/css", ".shiny-bound-input .div #spin { visibility: hidden; }"),
+    div(htmlOutput("createJobHyperlink"), class="span10"),
+    tags$style(type="text/css", "#spin { visibility: hidden; }"),
     #htmlOutput("accountSummary"),
     htmlOutput("renderLogo")),
   mainPanel(tabsetPanel(

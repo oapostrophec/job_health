@@ -59,6 +59,17 @@ shinyServer(function(input, output){
     paste(html_image)
   }) 
   
+  output$createJobHyperlink <- renderText({
+    if(input$get_job == 0){
+      return(NULL)
+    }else{
+      job_id = job_id = input$job_id
+      link = paste('https://make.crowdflower.com/jobs/', job_id, sep="")
+      html = paste('<a target="_blank" href="', link, '">Go To Jobs Page</a>', sep="")
+      paste(html)
+    }
+  })
+  
   output$accountSummary <- renderText({
     #if(input$get_job == 0 && input$get_email == 0){
     if(input$get_job == 0){
@@ -336,21 +347,26 @@ shinyServer(function(input, output){
       if(is.na(working)){
         working = 0
       }
-      print(312)
+      print("working 329")
+      print(working)
       tainted = sum(pull_tainted_breakdown_data()$y)
       if(is.na(tainted)){
         tainted = 0
       }
-      print(314)
+      print("tainted 335")
+      print(tainted)
       checked_out = as.numeric(get_number_checked_out())
       if(is.na(checked_out)){
         checked_out = 0
       }
-      print(316)
+      print("Checked out 341")
+      print(checked_out)
       all_available_workers = as.numeric(get_everyone_available())
       if(is.na(all_available_workers)){
         all_available_workers = 0
       }
+      print("all availabled 347")
+      print(all_available_workers)
       
       not_in_yet = max(0,all_available_workers - (maxed_out + working + tainted + checked_out))
       all_v = c(maxed_out, working, tainted, checked_out, not_in_yet)
@@ -364,7 +380,7 @@ shinyServer(function(input, output){
       return(NULL)
     } else {
       job_id = input$job_id
-      print("in get_number_checked_out")
+      #print("in get_number_checked_out")
       worker_stats = pull_worker_stats()
       data = sum(worker_stats$no_judgments==1)
       data
@@ -472,16 +488,6 @@ shinyServer(function(input, output){
     }
   })
   
-  get_max_setting_correct <- reactive({
-    if (input$get_job == 0 || input$job_id == 0) {
-      # User has not uploaded a file yet
-      return(NULL)
-    } else {
-      
-      
-    }
-  })
-  
   get_max_setting <- reactive({
     if (input$get_job == 0 || input$job_id == 0) {
       # User has not uploaded a file yet
@@ -527,8 +533,18 @@ shinyServer(function(input, output){
     } else {
       max_work_setting = as.numeric(get_max_setting())
       workers_with_work = pull_judgment_counts()
-      workers_who_maxed_out = workers_with_work[workers_with_work$judgments_count == max_work_setting,]
+      
+      workers_with_work$unit_judgments_count = 
+        workers_with_work$judgments_count - workers_with_work$golds_count
+      
+      workers_who_maxed_out = 
+        workers_with_work[workers_with_work$judgments_count >= max_work_setting,]
+      
       num_maxed_out = nrow(workers_who_maxed_out)
+      print("In get_num_maxed_out")
+      print(max_work_setting)
+      print(head(workers_with_work))
+      print(num_maxed_out)
       return(num_maxed_out)
     }
   })
@@ -568,9 +584,6 @@ shinyServer(function(input, output){
       #data = read.csv(paste0(temp_dir,"/",
       #                       "everyone_available_385528_May_23_15:38:15_2014.csv"))
       #data= data[1,]
-      print("Workset server Line 518")
-      print(names(data))
-      print(head(data))
       data
     }
   })
@@ -754,7 +767,7 @@ shinyServer(function(input, output){
       count = length(skill_names[grepl("level_\\d_contributors", skill_names)])
       
       if (is.null(mjw)) {
-        mjw_message = "<p><i class=\"icon-resize-small\"></i> Whoa. The max work per judgments setting is empty. 
+        mjw_message = "<p><i class=\"icon-resize-small\"></i><u>No Max Judgments per Contributor</u>: Whoa. The max work per judgments setting is empty. 
         This means contributors can be in the job for as long as they want 
         and have the opportunity to learn TQ's. 
         See the success center docs for more info on how to set this.</p>"
@@ -763,7 +776,7 @@ shinyServer(function(input, output){
       }
       
       if (is.null(mjip)) {
-        mjip_message = "<p><i class=\"icon-resize-small\"></i><i class=\"icon-warning-sign\"></i> Ah oh. There is no Max Work per IP set.
+        mjip_message = "<p><i class=\"icon-resize-small\"></i><i class=\"icon-warning-sign\"></i><u>No Max Judgments per IP:</u> Ah oh. There is no Max Work per IP set.
         This means someone coming from one IP can contribute work with many contributor IDs.
         See the success center docs for more info on how to set this.</p>"
       } else {
@@ -771,14 +784,14 @@ shinyServer(function(input, output){
       }
       
       if(count == 0){
-        skill_message = "<p><i class=\"icon-filter\"></i> Hmmm. We did not detect a leveled crowd. 
+        skill_message = "<p><i class=\"icon-filter\"></i><u>No Leveled Crowd</u>: Hmmm. We did not detect a leveled crowd. 
                         We highly recommend you use a levelled crowd for all jobs.</p>"
       } else {
         skill_message = ""
       }
       
       if(is.null(quiz_mode)){
-        qm_message = "<p><i class=\"icon-pencil\"></i> So there is no quiz mode in this job. 
+        qm_message = "<p><i class=\"icon-pencil\"></i><u>Quiz Mode Disabled</u>: So there is no quiz mode in this job. 
         Is that on purpose?</p>"
       } else {
         qm_message=""
@@ -1051,7 +1064,7 @@ shinyServer(function(input, output){
     print(available)
     #reject_at = json$options$reject_at
     if(available < 100 || is.na(available) || is.null(available)){
-      too_small = "<p><i class=\"icon-minus-sign\"></i> <b>Hold Up: The contributor pool for this job is very small. 
+      too_small = "<p><i class=\"icon-minus-sign\"></i><u>Small Contributor Pool</u>: <b>Hold Up: The contributor pool for this job is very small. 
       You need to consider broadening it (targetting more countries, levels, etc) 
       or resetting your throughput expectations.</b></p>"
     } else {
@@ -1088,20 +1101,20 @@ shinyServer(function(input, output){
     }
     
     if(percent_tainted > 35){
-      failure_message = "<p><i class=\"icon-remove-sign\"></i> Ah oh: We're getting a lot of failures in
+      failure_message = "<p><i class=\"icon-remove-sign\"></i><u>Percent Tainted</u>: Ah Oh. We're getting a lot of failures in
       work mode. You may want to check on the Test Questions and the reject_at rate.</p>"
-      } else {
-        failure_message = ""
-      }
-      
-      if(percent_maxed > 50){
-        maxed_message = "<p><i class=\"icon-resize-full\"></i> Note: Over %50 of the workers in the job have maxed out. If the job is not near to finishing you may want to add more TQs or up the max work settings.</p>"
-      } else {
-        maxed_message = ""
-      }
-      
-      if(too_small == "" && failure_message == "" && maxed_message == ""){
-        paste("<p class=\"alert alert-success\">
+    } else {
+      failure_message = ""
+    }
+    
+    if(percent_maxed > 50){
+      maxed_message = "<p><i class=\"icon-resize-full\"></i><u>Percent Maxed</u>: Over %50 of the workers in the job have maxed out. If the job is not near to finishing you may want to add more TQs or up the max work settings.</p>"
+    } else {
+      maxed_message = ""
+    }
+    
+    if(too_small == "" && failure_message == "" && maxed_message == ""){
+      paste("<p class=\"alert alert-success\">
              <i class=\"icon-ok\"></i>
              <big>Throughput Contributor Concerns:</big>
              <br>We did not detect any obvious concerns/issues.</p>")
@@ -1146,19 +1159,19 @@ shinyServer(function(input, output){
     
     
     if(percent_viable < 20){
-      viable_message = "<p>Careful: Looks like your group of active contributors is dwindling.</p>"
+      viable_message = "<p><u>Dwindling Active Group</u>: Looks like your group of active contributors is dwindling.</p>"
     } else {
       viable_message = ""
     }
     
     if(percent_check_out > 35){
-      lookers_message = "<p>Ah oh: We're seeing a high percentage of contributors just looking at the task or giving up after quiz mode. You may want to up the Payment per Task or broaden your contributor target.</p>"
+      lookers_message = "<p><u>Percent Dropouts:</u> Ah oh. We're seeing a high percentage of contributors just looking at the task or giving up after quiz mode. You may want to up the Payment per Task or broaden your contributor target.</p>"
     } else {
       lookers_message = ""
     }
     
     if(percent_dont_care > 50){
-      dont_care_message ="<p>Yikes: Over 50% of people eligible for this job have not even looked at it. You
+      dont_care_message ="<p><u>Percent Not Reached:</u> Over 50% of people eligible for this job have not even looked at it. You
        may want to increase the pay or make the job a little easier.</p>"
     } else {
       dont_care_message = ""
@@ -1209,7 +1222,7 @@ shinyServer(function(input, output){
       
       #More than 19% of golds are missed +67% of the time
       if(nrow(highly_missed)/num_golds > .19){
-        tq_missed_message = "<p><i class=\"icon-edit\"></i> Missed TQ's: There are quite a few test questions that are highly missed. 
+        tq_missed_message = "<p><i class=\"icon-edit\"></i><u>Highly Missed TQ's</u>: There are quite a few test questions that are highly missed. 
         We would update those before digging into Quality too much.</p>"
       } else {
         tq_missed_message = ""
@@ -1217,7 +1230,7 @@ shinyServer(function(input, output){
      
       #More than 19% of golds are contested +50% of the time
       if(nrow(highly_contested)/num_missed > .19){
-        tq_contested_message = "<p><i class=\"icon-edit\"></i> Contested TQ's: There are quite a few missed test questions that are highly contested.</p>"
+        tq_contested_message = "<p><i class=\"icon-edit\"></i><u>Highly Contested TQ's</u>: There are quite a few missed test questions that are highly contested.</p>"
       } else{
         tq_contested_message = "" 
       }
@@ -1225,7 +1238,7 @@ shinyServer(function(input, output){
       #Enough Golds
       #wrt number of units for every 100 units there should be AT LEAST 10 units.
       if(num_golds/num_units < .11 && num_golds < 100){
-        enough_golds_message = "<p><i class=\"icon-list-alt\"></i> Careful: There are very few golds given the number of units. 
+      enough_golds_message = "<p><i class=\"icon-list-alt\"></i><u>Too Few TQs</u>: Careful. There are very few golds given the number of units. 
         You may want to increase it.</p>"
         } else {
           enough_golds_message = ""
@@ -1267,8 +1280,8 @@ shinyServer(function(input, output){
     i = 4
     j = 5
     
-    if(i < j){
-      times_message ="<p><i class=\"icon-time\"></i> Caution: We've detected some speed demons in this task. 
+      if(i < j){
+        times_message ="<p><i class=\"icon-time\"></i><u>Speed Demons Warning</u>: Caution, we've detected some speed demons in this task. 
         You may want to take a look at them and update Speed Limit Settings when needed.</p>"
     } else{
       times_message =""
@@ -1300,7 +1313,7 @@ shinyServer(function(input, output){
     
     #Just Paste Contentions
     if(i < j){
-      contentions = "<p> FYI: Here are some of the popular contentions 
+      contentions = "<p><u>Most Popular Contentions</u>: FYI, here are some of the popular contentions 
       we are seeing in this job.</p>"
     } else {
       contentions = ""
@@ -1310,7 +1323,7 @@ shinyServer(function(input, output){
     #look up given answers wrt possible values in JSON
     #if unique gold answers < .75(unique values)
     if(i < j){
-      diverse_message = "<p>It seems that your provided TQ answers do not encompass all of the provided values on some questions. 
+      diverse_message = "<p><u>TQ Diversity</u>: It seems that your provided TQ answers do not encompass all of the provided values on some questions. 
       This might lead to misunderstandings; make sure to address any edge cases within instructions 
       and task design if they are not throughly explained through TQs.</p>"
     } else {
@@ -1477,9 +1490,9 @@ shinyServer(function(input, output){
       return(NULL)
     } else {
       job_id = input$job_id
-      print(673)
+      #print(673)
       tainted_breakdown_data = pull_tainted_breakdown_data()
-      print(675)
+      #print(675)
       data_list = lapply(split(tainted_breakdown_data, tainted_breakdown_data$group),
                          function(x) {
                            res <- lapply(split(x, rownames(x)), as.list)
@@ -1487,7 +1500,7 @@ shinyServer(function(input, output){
                            return(res)
                          }
       )
-      print(681)
+      #print(681)
       h1 <- rCharts::Highcharts$new()
       invisible(sapply(data_list, function(x) {
         h1$series(data = x, type = "column", name = x[[1]]$group)
@@ -1496,7 +1509,7 @@ shinyServer(function(input, output){
       h1$tooltip(useHTML = T, formatter = 
                    "#! function() { return('<b>' + this.point.group + '</b><br>' + 'Num workers: ' + this.point.y); } !#")
       h1$addParams(dom = 'tainted_bar')
-      print(688)
+      #print(688)
       print(h1)
     }
   })
@@ -1508,10 +1521,10 @@ shinyServer(function(input, output){
       job_id = input$job_id
       speed_violations = pull_speed_violations()
       answer_distributions = pull_answer_flags()
-      print(699)
+      #print(699)
       trust_eliminations = pull_trust_taints()
       all_tainted = pull_everyone_tainted()
-      print(702)
+      #print(702)
       # ideally we would merge these real nice to remove duplicates
       # TODO we should check between these dbs for duplicates
       speed_limit_count = length(unique(speed_violations$worker_id))
@@ -1524,7 +1537,7 @@ shinyServer(function(input, output){
       tained_for_other_reasons_count = length(unique(tained_for_other_reasons))
       group_categories= c("Speed limit violations", "Answer distribution violations",
                           "Low trust (tq)","Other reasons")
-      print(715)
+      #print(715)
       tainted_breakdown_data = data.frame(group=group_categories,
                                           y = c(speed_limit_count,
                                                 answer_distributions_count,
@@ -1533,7 +1546,7 @@ shinyServer(function(input, output){
                                           x=rep("", times=4), # this is a fake grouping variable
                                           preserve_order = c(5,4,3,2)
       )
-      print(724)
+      #print(724)
       return(tainted_breakdown_data)
     }
     
@@ -1544,7 +1557,7 @@ shinyServer(function(input, output){
       return(NULL)
     }else{
       job_id = input$job_id
-      print("in pull_speed_violations")
+      #print("in pull_speed_violations")
       db = db_call
       query = velocity_violations_query(job_id)
       file = paste0(temp_dir,"/",
@@ -1552,9 +1565,9 @@ shinyServer(function(input, output){
                     format(Sys.time(), "%b_%d_%X_%Y"),
                     ".csv")
       data = run_this_query(db, query, file)
-      print("Workset server Line 772")
-      print(names(data))
-      print(head(data))
+      #print("Workset server Line 772")
+      #print(names(data))
+      #print(head(data))
       data
     } 
   })
@@ -1564,7 +1577,7 @@ shinyServer(function(input, output){
       return(NULL)
     }else{
       job_id = input$job_id
-      print(job_id)
+      #print(job_id)
       worker_stats = pull_worker_stats()
       data = worker_stats[worker_stats$answer_distribution_flags == 1,c("worker_id", "flag_reason")]
       data
@@ -1576,14 +1589,14 @@ shinyServer(function(input, output){
       return(NULL)
     }else{
       job_id = input$job_id
-      print("in pull_trust_taints")
-      print(job_id)
+      #print("in pull_trust_taints")
+      #print(job_id)
       worker_stats = pull_worker_stats()
-      print("line 825")
-      print(head(worker_stats))
+      #print("line 825")
+      #print(head(worker_stats))
       data = worker_stats[worker_stats$trust_taint == 1, c("worker_id", "golden_trust")]
-      print("and now data")
-      print(head(data))
+      #print("and now data")
+      #print(head(data))
       data
     } 
   })
@@ -1608,11 +1621,11 @@ shinyServer(function(input, output){
     } else {
       line1 = "<div class=\"bar_divs well\" id=\"tainted_div\" style=\"display: none;\">"
       title ="<h4>Tainted workers</h4>"
-      print(821)
+      #print(821)
       tainted_breakdown = pull_tainted_breakdown_data()
-      print(823)
+      #print(823)
       all_tainted = sum(tainted_breakdown$y)
-      print(825)
+      #print(825)
       ##### the graph
       h1 = tainted_bar()
       # you need to insert this as html/script, so the chart needs to be processed properly first
@@ -1637,14 +1650,17 @@ shinyServer(function(input, output){
       return(NULL)
     } else {
       job_id = input$job_id
-      print("in pull_judgment_counts")
+      #print("in pull_judgment_counts")
       worker_stats = pull_worker_stats()
-      data = worker_stats[worker_stats$num_judgments > 0,c("worker_id", "num_judgments", "tainted", "flagged_at")]
+      data = worker_stats[worker_stats$num_judgments > 0,c("worker_id", "num_judgments", "tainted", "flagged_at","golds_count")]
       
-      names(data) = c("worker_id", "judgments_count", "tainted", "flagged_at")
+      names(data) = c("worker_id", "judgments_count", "tainted", "flagged_at","golds_count")
       if (nrow(data) == 0) {
         data[1,] = rep(0, times=ncol(data))
       } 
+      print("in pull_judgment_counts line 1630")
+      print(names(data))
+      print(head(data))
       data
     }
   })
@@ -1689,8 +1705,8 @@ shinyServer(function(input, output){
       workers_with_judgments = lapply(split(workers_with_judgments, 
                                             1:nrow(workers_with_judgments)), as.list)
       names(workers_with_judgments) = NULL
-      print("Line 907")
-      print(workers_with_judgments[[1]])
+      #print("Line 907")
+      #print(workers_with_judgments[[1]])
       h1$series(data = workers_with_judgments, type = "column", name = "Workers")
       
       
