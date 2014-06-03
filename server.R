@@ -54,8 +54,8 @@ instructions_length <- function(json_instructions){
 shinyServer(function(input, output){
   
   output$renderLogo <- renderText({
-    image_path = "http://cf-public-view.s3.amazonaws.com/coolstuff/cf_logo_blue.png"
-    html_image = paste("<img class=\"img-circle\" src=", image_path, " width=\"55%\"/>", sep="")
+    image_path = "http://cf-public-view.s3.amazonaws.com/coolstuff/electrical-heart-monitor.jpg"
+    html_image = paste("<img src=", image_path, " width=\"80%\"/>", sep="")
     paste(html_image)
   }) 
   
@@ -64,7 +64,7 @@ shinyServer(function(input, output){
     if(input$get_job == 0){
       return(NULL)
     }else{
-      output="Account Summary Info Here:"
+      output="<p><b>Pending Account Profile</b></p>"
     }
     
   })
@@ -890,12 +890,12 @@ shinyServer(function(input, output){
       find_validates = "validates=\"(\\w|:|\\[|\\]|\\'|\\,|\\{|\\})*\\s?(required)"
       count_validates = str_count(cml, pattern=find_validates)
       vpa = upa * count_validates
-      if(vpa > 19){
+      if(vpa > 20){
         unit_warning = paste("<p><u>Long Task Warning</u>: Careful, we found an exorbitant amount of required fields in one task. 
                              You may want to decrease the Units per Task. 
                              If this is an image moderations type task you may ignore this message.</p>", 
                              "<p><b>Number of Required Fields per Task:</b>", vpa,"</p>")
-      } else if(vpa < 6){
+      } else if(vpa < 5){
         unit_warning = paste("<p><u>Short Task Warning</u>: Careful, it seems like there are not many required fields per task. 
                              You may want to up the Units per Task setting to get more bang for your buck.</p>", 
                              "<p><b>Number of Required Fields per Task:</b>", vpa,"</p>")
@@ -1037,63 +1037,58 @@ shinyServer(function(input, output){
     if (input$get_job == 0 || input$job_id == 0) {
       return("<p>Awaiting Data.</p>")
     } else {
-      workers = get_state_counts()
-      #all_v = c(maxed_out, working, tainted, checked_out, not_in_yet)
-      available = as.numeric(get_everyone_available())
-      
-      maxed =  workers[1]
-      viable = workers[2]
-      tainted = workers[3]
-      dropouts = workers[4]
-      onlookers = workers[5]
-      
-      print("Number of workers available")
-      print(available)
-      #reject_at = json$options$reject_at
-      if(available < 100 || is.na(available) || is.null(available)){
-        too_small = "<p><i class=\"icon-minus-sign\"></i> <b>Hold Up: The contributor pool for this job is very small. 
+    workers = get_state_counts()
+    #all_v = c(maxed_out, working, tainted, checked_out, not_in_yet)
+    available = as.numeric(get_everyone_available())
+    
+    maxed =  workers[1]
+    viable = workers[2]
+    tainted = workers[3]
+    check_out = workers[4]
+    dont_care = workers[5]
+    
+    print("Number of workers available")
+    print(available)
+    #reject_at = json$options$reject_at
+    if(available < 100 || is.na(available) || is.null(available)){
+      too_small = "<p><i class=\"icon-minus-sign\"></i> <b>Hold Up: The contributor pool for this job is very small. 
       You need to consider broadening it (targetting more countries, levels, etc) 
       or resetting your throughput expectations.</b></p>"
-      } else {
-        too_small=""
-      }
-      
-      total_worked = viable + maxed + tainted + dropouts + onlookers
-      percent_viable = (viable/total_worked)*100
-      percent_maxed = (maxed/total_worked) * 100
-      percent_tainted = (tainted/total_worked) * 100
-      percent_dropouts = (dropouts/total_worked) * 100
-      percent_onlookers = (onlookers/total_worked) * 100
-      
-      if(is.nan(percent_viable) || is.infinite(percent_viable)){
-        percent_viable = 0
-      }
-      
-      if(is.nan(percent_maxed) || is.infinite(percent_maxed)){
-        percent_maxed = 0
-      }
-      
-      if(is.nan(percent_tainted) || is.infinite(percent_tainted)){
-        percent_tainted = 0
-      }
-      
-      if(is.nan(percent_dropouts) || is.infinite(percent_dropouts)){
-        percent_dropouts = 0
-      }
-      
-      if(is.nan(percent_onlookers) || is.infinite(percent_onlookers)){
-        percent_onlookers = 0
-      }
-      
-      print("Percentages: viable, maxed, tainted, dropouts, onlookers")
-      print(percent_viable)
-      print(percent_maxed)
-      print(percent_tainted)
-      print(percent_dropouts)
-      print(percent_onlookers)
-      
-      if(percent_tainted > 35){
-        failure_message = "<p><i class=\"icon-remove-sign\"></i> Ah oh: We're getting a lot of failures in
+    } else {
+      too_small=""
+    }
+    
+    total_worked = viable + maxed + tainted + check_out
+    total = total_worked + dont_care
+    
+    percent_viable = (viable/total_worked)*100
+    percent_maxed = (maxed/total_worked) * 100
+    percent_tainted = (tainted/total_worked) * 100
+    percent_check_out = (check_out/total_worked) * 100
+    percent_dont_care = (dont_care/total) * 100
+    
+    if(is.nan(percent_viable) || is.infinite(percent_viable)){
+      percent_viable = 0
+    }
+    
+    if(is.nan(percent_maxed) || is.infinite(percent_maxed)){
+      percent_maxed = 0
+    }
+    
+    if(is.nan(percent_tainted) || is.infinite(percent_tainted)){
+      percent_tainted = 0
+    }
+    
+    if(is.nan(percent_check_out) || is.infinite(percent_check_out)){
+      percent_check_out = 0
+    }
+    
+    if(is.nan(percent_dont_care) || is.infinite(percent_dont_care)){
+      percent_dont_care = 0
+    }
+    
+    if(percent_tainted > 35){
+      failure_message = "<p><i class=\"icon-remove-sign\"></i> Ah oh: We're getting a lot of failures in
       work mode. You may want to check on the Test Questions and the reject_at rate.</p>"
       } else {
         failure_message = ""
@@ -1122,112 +1117,115 @@ shinyServer(function(input, output){
       # User has not uploaded a file yet
       return("<p>Waiting for Data.</p>")
     } else {
-      workers = get_state_counts()
-      #all_v = c(maxed_out, working, tainted, checked_out, not_in_yet)
-      
-      #available = as.numeric(get_everyone_available)
-      
-      maxed =  workers[1]
-      viable = workers[2]
-      tainted = workers[3]
-      dropouts = workers[4]
-      onlookers = workers[5]
-      
-      #quiz mode failures have not been pulled
-      #qm_fail = 15
-      
-      total_worked = viable + maxed + tainted + dropouts + onlookers
-      percent_viable = (viable/total_worked)*100
-      percent_dropouts = (dropouts/total_worked) * 100
-      percent_onlookers = (onlookers/total_worked) * 100
-      
-      if(is.nan(percent_viable) || is.infinite(percent_viable)){
-        percent_viable = 0
-      }
-      
-      if(is.nan(percent_dropouts) || is.infinite(percent_dropouts)){
-        percent_dropouts = 0
-      }
-      
-      if(is.nan(percent_onlookers) || is.infinite(percent_onlookers)){
-        percent_onlookers = 0
-      }
-      
-      
-      if(percent_viable < 20){
-        viable_message = "<p>Careful: Looks like your group of active contributors is dwindling.</p>"
-      } else {
-        viable_message = ""
-      }
-      
-      if(percent_dropouts + percent_onlookers > 35){
-        lookers_message = "<p>Ah oh: We're seeing a high percentage of contributors just looking at the task or giving up after quiz mode. You may want to up the Payment per Task or broaden your contributor target.</p>"
-      } else {
-        lookers_message = ""
-      }
-      
-      if(viable_message == "" && lookers_message == ""){
-        paste("<p class=\"alert alert-success\">
+    workers = get_state_counts()
+    #all_v = c(maxed_out, working, tainted, checked_out, not_in_yet)
+    
+    #available = as.numeric(get_everyone_available)
+    
+    maxed =  workers[1]
+    viable = workers[2]
+    tainted = workers[3]
+    check_out = workers[4]
+    dont_care = workers[5]
+    
+    #quiz mode failures have not been pulled
+    #qm_fail = 15
+    total_worked = viable + maxed + tainted + check_out
+    total = total_worked + dont_care
+    percent_viable = (viable/total_worked)*100
+    percent_check_out = (check_out/total_worked) * 100
+    percent_dont_care = (dont_care/total) * 100
+    
+    if(is.nan(percent_viable) || is.infinite(percent_viable)){
+      percent_viable = 0
+    }
+    
+    if(is.nan(percent_check_out) || is.infinite(percent_check_out)){
+      percent_check_out = 0
+    }
+    
+    
+    if(percent_viable < 20){
+      viable_message = "<p>Careful: Looks like your group of active contributors is dwindling.</p>"
+    } else {
+      viable_message = ""
+    }
+    
+    if(percent_check_out > 35){
+      lookers_message = "<p>Ah oh: We're seeing a high percentage of contributors just looking at the task or giving up after quiz mode. You may want to up the Payment per Task or broaden your contributor target.</p>"
+    } else {
+      lookers_message = ""
+    }
+    
+    if(percent_dont_care > 50){
+      dont_care_message ="<p>Yikes: Over 50% of people eligible for this job have not even looked at it. You
+       may want to increase the pay or make the job a little easier.</p>"
+    } else {
+      dont_care_message = ""
+    }
+    
+    if(viable_message == "" && lookers_message == "" && dont_care_message == ""){
+      paste("<p class=\"alert alert-success\">
              <i class=\"icon-ok\"></i>
              <big>Throughput Contributor Cautions:</big>
              <br>We do not have any suggestions at this time. Make sure to review any issues in the Throughput
              Contributor Errors section above.</p>")
-      } else {
-        paste("<div class=\"alert\">", "<p><big>Throughput Contributor Cautions:</big></p>",
-              viable_message, lookers_message, "</div>")
-      }
-    }
-  })
-  
-  ###Quality Warnings
-  output$quality_gold_errors <- renderText({
-    if (input$get_job == 0 || input$job_id == 0) {
-      return("<p>Waiting to pull builder_units.</p>")
     } else {
-      #Data to Grab
-      #json = get_job_settings_from_json()
-      units = pull_unit_data()
-      #gold answers - grab values per cml_name
-      print("Did you make it here? 1186")
-      enabled_golds = units[units$state == 6,]
-      print("ENABLED GOLDS")
-      print(enabled_golds)
+      paste("<div class=\"alert\">", "<p><big>Throughput Contributor Cautions:</big></p>",
+            viable_message, lookers_message, dont_care_message, "</div>")
+    }
+  }
+ })
+  
+ ###Quality Warnings
+ output$quality_gold_errors <- renderText({
+  if (input$get_job == 0 || input$job_id == 0) {
+     return("<p>Waiting to pull builder_units.</p>")
+  } else {
+    #Data to Grab
+    #json = get_job_settings_from_json()
+    units = pull_unit_data()
+    #gold answers - grab values per cml_name
+    print("Did you make it here? 1186")
+    enabled_golds = units[units$state == 6,]
+    print("ENABLED GOLDS")
+    print(enabled_golds)
+    
+    disabled_golds = units[units$state == 7,]
+    print("DISABLED GOLDS")
+    print(disabled_golds)
+     
+    num_units = nrow(units)
+    num_golds = nrow(enabled_golds)
+    
+    if(num_golds != 0){
+      enabled_golds$missed_percent = enabled_golds$missed_count/enabled_golds$judgments_count
+      enabled_golds$contested_percent = enabled_golds$contested_count/enabled_golds$missed_count
       
-      disabled_golds = units[units$state == 7,]
-      print("DISABLED GOLDS")
-      print(disabled_golds)
+      highly_missed = enabled_golds[enabled_golds$missed_percent > .67,]
+      highly_contested = enabled_golds[enabled_golds$contested_percent > .50,]
       
-      num_units = nrow(units)
-      num_golds = nrow(enabled_golds)
+      num_missed = nrow(enabled_golds[enabled_golds$missed_count > 0,])
       
-      if(num_golds != 0){
-        enabled_golds$missed_percent = enabled_golds$missed_count/enabled_golds$judgments_count
-        enabled_golds$contested_percent = enabled_golds$contested_count/enabled_golds$missed_count
-        
-        highly_missed = enabled_golds[enabled_golds$missed_percent > .67,]
-        highly_contested = enabled_golds[enabled_golds$contested_percent > .50,]
-        
-        num_missed = nrow(enabled_golds[enabled_golds$missed_count > 0,])
-        
-        #More than 9% of golds are missed +67% of the time
-        if(nrow(highly_missed)/num_golds > .09){
-          tq_missed_message = "<p><i class=\"icon-edit\"></i> Missed TQ's: There are quite a few test questions that are highly missed. 
+      #More than 19% of golds are missed +67% of the time
+      if(nrow(highly_missed)/num_golds > .19){
+        tq_missed_message = "<p><i class=\"icon-edit\"></i> Missed TQ's: There are quite a few test questions that are highly missed. 
         We would update those before digging into Quality too much.</p>"
-        } else {
-          tq_missed_message = ""
-        }
-        
-        #More than 19% of golds are contested +50% of the time
-        if(nrow(highly_contested)/num_missed > .19){
-          tq_contested_message = "<p><i class=\"icon-edit\"></i> Contested TQ's: There are quite a few missed test questions that are highly contested.</p>"
-        } else{
-          tq_contested_message = "" 
-        }
-        
-        #Enough Golds
-        #wrt number of units for every 100 units there should be AT LEAST 10 units.
-        if(num_golds/num_units < .11){
-          enough_golds_message = "<p><i class=\"icon-list-alt\"></i> Careful: There are very few golds given the number of units. 
+      } else {
+        tq_missed_message = ""
+      }
+     
+      #More than 19% of golds are contested +50% of the time
+      if(nrow(highly_contested)/num_missed > .19){
+        tq_contested_message = "<p><i class=\"icon-edit\"></i> Contested TQ's: There are quite a few missed test questions that are highly contested.</p>"
+      } else{
+        tq_contested_message = "" 
+      }
+ 
+      #Enough Golds
+      #wrt number of units for every 100 units there should be AT LEAST 10 units.
+      if(num_golds/num_units < .11 && num_golds < 100){
+        enough_golds_message = "<p><i class=\"icon-list-alt\"></i> Careful: There are very few golds given the number of units. 
         You may want to increase it.</p>"
         } else {
           enough_golds_message = ""
