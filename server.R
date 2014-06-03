@@ -1403,12 +1403,16 @@ shinyServer(function(input, output){
       text_fields = find_cml_elements(what_to_find=c("text", "textarea"),
                                       where_to_look=cml) #get_cml_fields()
       #####
+      num_checked_out = get_state_counts()[4]
+      worker_sum = paste0(num_checked_out, " workers saw your job but did not submit any judgments.<br>
+      This may be a technical issue or a complexity problem.")
       overview = paste0("Your job has ", num_fields_in_job, 
                         " questions in it. <br>", text_fields, " are text fields.")
-      comment = "Is this a little? Is this a lot? We don't know yet, but we'll learn soon."
+      comment = "Jobs with many questions displayed at once may appear tideous. Text fields take more time than other fields. If there are 3 or more text questions, consider breaking the job down into multiple jobs, or raising the pay significantly."
       closing_div = "</div>"
       ## complexity will potentially be here too
-      summary = paste(line1, title, overview,comment,
+      summary = paste(line1, title, worker_sum, 
+                      overview,comment,
                       closing_div, sep="<br>")
       paste(summary)
     }
