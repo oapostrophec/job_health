@@ -92,10 +92,7 @@ shinyServer(function(input, output){
       }else{
         db = db_call
         query = get_channel_data(job_id) 
-        file = paste0(temp_dir,"/",
-                      "builder_channels", "_", job_id, "_",
-                      format(Sys.time(), "%b_%d_%X_%Y"),
-                      ".csv")
+        file = tempfile(tmpdir=temp_dir, fileext=".csv", pattern="builder_channels_")
         data = run_this_query(db, query, file)
         data
       }
@@ -121,10 +118,7 @@ shinyServer(function(input, output){
       db = db_call
       print("line 111")
       query = worker_stats_query(job_id)
-      file = paste0(temp_dir,"/",
-                    "worker_stats", "_", job_id, "_",
-                    format(Sys.time(), "%b_%d_%X_%Y"),
-                    ".csv")
+      file = tempfile(tmpdir=temp_dir, fileext=".csv", pattern="worker_stats_")
       data = run_this_query(db, query, file)
       print("THis is how the data comes out!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
       data[is.na(data)] <- c("")
@@ -145,10 +139,7 @@ shinyServer(function(input, output){
       }else{
         db = db_call
         query = get_job_data(job_id) 
-        file = paste0(temp_dir,"/",
-                      "builder_jobs", "_", job_id, "_",
-                      format(Sys.time(), "%b_%d_%X_%Y"),
-                      ".csv")
+        file = tempfile(tmpdir=temp_dir, fileext=".csv", pattern="builder_jobs_")
         data = run_this_query(db, query, file)
         data
       }
@@ -166,10 +157,7 @@ shinyServer(function(input, output){
         print("in pull_unit_data")
         db = db_call
         query = get_unit_data(job_id) 
-        file = paste0(temp_dir,"/",
-                      "builder_units", "_", job_id, "_",
-                      format(Sys.time(), "%b_%d_%X_%Y"),
-                      ".csv")
+        file = tempfile(tmpdir=temp_dir, fileext=".csv", pattern="builder_units_")
         data = run_this_query(db, query, file)
         data
         
@@ -221,10 +209,7 @@ shinyServer(function(input, output){
         db = db_call
         query = work_available_query()
         print(query)
-        file = paste0(temp_dir,"/",
-                      "work_available", "_",
-                      format(Sys.time(), "%b_%d_%X_%Y"),
-                      ".csv")
+        file = tempfile(tmpdir=temp_dir, fileext=".csv", pattern="work_available_")
         data = run_this_query(db, query, file)
         data
       } 
@@ -257,10 +242,7 @@ shinyServer(function(input, output){
       } else {
         db = db_call
         query = payrate_satisfaction_query(job_id)
-        file = paste0(temp_dir,"/",
-                      "payrate_satisfaction", "_",
-                      format(Sys.time(), "%b_%d_%X_%Y"),
-                      ".csv")
+        file = tempfile(tmpdir=temp_dir, fileext=".csv", pattern="payrate_satisfaction_")
         data = run_this_query(db, query, file)
         data
       } 
@@ -277,10 +259,7 @@ shinyServer(function(input, output){
       } else {
         db = db_call
         query = dropout_rate_query(job_id)
-        file = paste0(temp_dir,"/",
-                      "payrate_satisfaction", "_",
-                      format(Sys.time(), "%b_%d_%X_%Y"),
-                      ".csv")
+        file = tempfile(tmpdir=temp_dir, fileext=".csv", pattern="dropout_rate_")
         data = run_this_query(db, query, file)
         
         data
@@ -392,7 +371,7 @@ shinyServer(function(input, output){
   output$throughput_bar <- renderChart({
     if (input$get_job == 0 || input$job_id==0) {
       # User has not uploaded a file yet
-      return(NULL)
+      return(rCharts::Highcharts$new())
     } else {
       print("in output$throughput_bar")
       job_id = input$job_id
@@ -408,7 +387,7 @@ shinyServer(function(input, output){
                  '#FF6B3C',#red,
                  '#00A1E8',#blue,
                  '#C4CDFF' #grey
-                 )
+      )
       print(335)
       state_counts = get_state_counts() 
       print(337)
@@ -467,7 +446,7 @@ shinyServer(function(input, output){
                  formatter = "#! function() { return('<b>' +  this.point.y + '</b><br>' + this.point.info )} !#")
       
       h1$addParams(dom = 'throughput_bar')
-      h1
+      return(h1)
       
     }
     
@@ -576,10 +555,7 @@ shinyServer(function(input, output){
                                        min_score = min_required_skills)
       print("<<<<<<<<<<<<<<<< EVERYONE QUERY >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
       print(query)
-      file = paste0(temp_dir,"/",
-                    "everyone_available", "_", job_id, "_",
-                    format(Sys.time(), "%b_%d_%X_%Y"),
-                    ".csv")
+      file = tempfile(tmpdir=temp_dir, fileext=".csv", pattern="everyone_available_")
       data = run_this_query(db, query, file)
       #data = read.csv(paste0(temp_dir,"/",
       #                       "everyone_available_385528_May_23_15:38:15_2014.csv"))
@@ -1050,71 +1026,71 @@ shinyServer(function(input, output){
     if (input$get_job == 0 || input$job_id == 0) {
       return("<p>Awaiting Data.</p>")
     } else {
-    workers = get_state_counts()
-    #all_v = c(maxed_out, working, tainted, checked_out, not_in_yet)
-    available = as.numeric(get_everyone_available())
-    
-    maxed =  workers[1]
-    viable = workers[2]
-    tainted = workers[3]
-    check_out = workers[4]
-    dont_care = workers[5]
-    
-    print("Number of workers available")
-    print(available)
-    #reject_at = json$options$reject_at
-    if(available < 100 || is.na(available) || is.null(available)){
-      too_small = "<p><i class=\"icon-minus-sign\"></i><u>Small Contributor Pool</u>: <b>Hold Up: The contributor pool for this job is very small. 
+      workers = get_state_counts()
+      #all_v = c(maxed_out, working, tainted, checked_out, not_in_yet)
+      available = as.numeric(get_everyone_available())
+      
+      maxed =  workers[1]
+      viable = workers[2]
+      tainted = workers[3]
+      check_out = workers[4]
+      dont_care = workers[5]
+      
+      print("Number of workers available")
+      print(available)
+      #reject_at = json$options$reject_at
+      if(available < 100 || is.na(available) || is.null(available)){
+        too_small = "<p><i class=\"icon-minus-sign\"></i><u>Small Contributor Pool</u>: <b>Hold Up: The contributor pool for this job is very small. 
       You need to consider broadening it (targetting more countries, levels, etc) 
       or resetting your throughput expectations.</b></p>"
-    } else {
-      too_small=""
-    }
-    
-    total_worked = viable + maxed + tainted + check_out
-    total = total_worked + dont_care
-    
-    percent_viable = (viable/total_worked)*100
-    percent_maxed = (maxed/total_worked) * 100
-    percent_tainted = (tainted/total_worked) * 100
-    percent_check_out = (check_out/total_worked) * 100
-    percent_dont_care = (dont_care/total) * 100
-    
-    if(is.nan(percent_viable) || is.infinite(percent_viable)){
-      percent_viable = 0
-    }
-    
-    if(is.nan(percent_maxed) || is.infinite(percent_maxed)){
-      percent_maxed = 0
-    }
-    
-    if(is.nan(percent_tainted) || is.infinite(percent_tainted)){
-      percent_tainted = 0
-    }
-    
-    if(is.nan(percent_check_out) || is.infinite(percent_check_out)){
-      percent_check_out = 0
-    }
-    
-    if(is.nan(percent_dont_care) || is.infinite(percent_dont_care)){
-      percent_dont_care = 0
-    }
-    
-    if(percent_tainted > 35){
-      failure_message = "<p><i class=\"icon-remove-sign\"></i><u>Percent Tainted</u>: Ah Oh. We're getting a lot of failures in
+      } else {
+        too_small=""
+      }
+      
+      total_worked = viable + maxed + tainted + check_out
+      total = total_worked + dont_care
+      
+      percent_viable = (viable/total_worked)*100
+      percent_maxed = (maxed/total_worked) * 100
+      percent_tainted = (tainted/total_worked) * 100
+      percent_check_out = (check_out/total_worked) * 100
+      percent_dont_care = (dont_care/total) * 100
+      
+      if(is.nan(percent_viable) || is.infinite(percent_viable)){
+        percent_viable = 0
+      }
+      
+      if(is.nan(percent_maxed) || is.infinite(percent_maxed)){
+        percent_maxed = 0
+      }
+      
+      if(is.nan(percent_tainted) || is.infinite(percent_tainted)){
+        percent_tainted = 0
+      }
+      
+      if(is.nan(percent_check_out) || is.infinite(percent_check_out)){
+        percent_check_out = 0
+      }
+      
+      if(is.nan(percent_dont_care) || is.infinite(percent_dont_care)){
+        percent_dont_care = 0
+      }
+      
+      if(percent_tainted > 35){
+        failure_message = "<p><i class=\"icon-remove-sign\"></i><u>Percent Tainted</u>: Ah Oh. We're getting a lot of failures in
       work mode. You may want to check on the Test Questions and the reject_at rate.</p>"
-    } else {
-      failure_message = ""
-    }
-    
-    if(percent_maxed > 50){
-      maxed_message = "<p><i class=\"icon-resize-full\"></i><u>Percent Maxed</u>: Over %50 of the workers in the job have maxed out. If the job is not near to finishing you may want to add more TQs or up the max work settings.</p>"
-    } else {
-      maxed_message = ""
-    }
-    
-    if(too_small == "" && failure_message == "" && maxed_message == ""){
-      paste("<p class=\"alert alert-success\">
+      } else {
+        failure_message = ""
+      }
+      
+      if(percent_maxed > 50){
+        maxed_message = "<p><i class=\"icon-resize-full\"></i><u>Percent Maxed</u>: Over %50 of the workers in the job have maxed out. If the job is not near to finishing you may want to add more TQs or up the max work settings.</p>"
+      } else {
+        maxed_message = ""
+      }
+      
+      if(too_small == "" && failure_message == "" && maxed_message == ""){
+        paste("<p class=\"alert alert-success\">
              <i class=\"icon-ok\"></i>
              <big>Throughput Contributor Concerns:</big>
              <br>We did not detect any obvious concerns/issues.</p>")
@@ -1130,115 +1106,115 @@ shinyServer(function(input, output){
       # User has not uploaded a file yet
       return("<p>Waiting for Data.</p>")
     } else {
-    workers = get_state_counts()
-    #all_v = c(maxed_out, working, tainted, checked_out, not_in_yet)
-    
-    #available = as.numeric(get_everyone_available)
-    
-    maxed =  workers[1]
-    viable = workers[2]
-    tainted = workers[3]
-    check_out = workers[4]
-    dont_care = workers[5]
-    
-    #quiz mode failures have not been pulled
-    #qm_fail = 15
-    total_worked = viable + maxed + tainted + check_out
-    total = total_worked + dont_care
-    percent_viable = (viable/total_worked)*100
-    percent_check_out = (check_out/total_worked) * 100
-    percent_dont_care = (dont_care/total) * 100
-    
-    if(is.nan(percent_viable) || is.infinite(percent_viable)){
-      percent_viable = 0
-    }
-    
-    if(is.nan(percent_check_out) || is.infinite(percent_check_out)){
-      percent_check_out = 0
-    }
-    
-    
-    if(percent_viable < 20){
-      viable_message = "<p><u>Dwindling Active Group</u>: Looks like your group of active contributors is dwindling.</p>"
-    } else {
-      viable_message = ""
-    }
-    
-    if(percent_check_out > 35){
-      lookers_message = "<p><u>Percent Dropouts:</u> Ah oh. We're seeing a high percentage of contributors just looking at the task or giving up after quiz mode. You may want to up the Payment per Task or broaden your contributor target.</p>"
-    } else {
-      lookers_message = ""
-    }
-    
-    if(percent_dont_care > 50){
-      dont_care_message ="<p><u>Percent Not Reached:</u> Over 50% of people eligible for this job have not even looked at it. You
+      workers = get_state_counts()
+      #all_v = c(maxed_out, working, tainted, checked_out, not_in_yet)
+      
+      #available = as.numeric(get_everyone_available)
+      
+      maxed =  workers[1]
+      viable = workers[2]
+      tainted = workers[3]
+      check_out = workers[4]
+      dont_care = workers[5]
+      
+      #quiz mode failures have not been pulled
+      #qm_fail = 15
+      total_worked = viable + maxed + tainted + check_out
+      total = total_worked + dont_care
+      percent_viable = (viable/total_worked)*100
+      percent_check_out = (check_out/total_worked) * 100
+      percent_dont_care = (dont_care/total) * 100
+      
+      if(is.nan(percent_viable) || is.infinite(percent_viable)){
+        percent_viable = 0
+      }
+      
+      if(is.nan(percent_check_out) || is.infinite(percent_check_out)){
+        percent_check_out = 0
+      }
+      
+      
+      if(percent_viable < 20){
+        viable_message = "<p><u>Dwindling Active Group</u>: Looks like your group of active contributors is dwindling.</p>"
+      } else {
+        viable_message = ""
+      }
+      
+      if(percent_check_out > 35){
+        lookers_message = "<p><u>Percent Dropouts:</u> Ah oh. We're seeing a high percentage of contributors just looking at the task or giving up after quiz mode. You may want to up the Payment per Task or broaden your contributor target.</p>"
+      } else {
+        lookers_message = ""
+      }
+      
+      if(percent_dont_care > 50){
+        dont_care_message ="<p><u>Percent Not Reached:</u> Over 50% of people eligible for this job have not even looked at it. You
        may want to increase the pay or make the job a little easier.</p>"
-    } else {
-      dont_care_message = ""
-    }
-    
-    if(viable_message == "" && lookers_message == "" && dont_care_message == ""){
-      paste("<p class=\"alert alert-success\">
+      } else {
+        dont_care_message = ""
+      }
+      
+      if(viable_message == "" && lookers_message == "" && dont_care_message == ""){
+        paste("<p class=\"alert alert-success\">
              <i class=\"icon-ok\"></i>
              <big>Throughput Contributor Cautions:</big>
              <br>We do not have any suggestions at this time. Make sure to review any issues in the Throughput
              Contributor Errors section above.</p>")
-    } else {
-      paste("<div class=\"alert\">", "<p><big>Throughput Contributor Cautions:</big></p>",
-            viable_message, lookers_message, dont_care_message, "</div>")
-    }
-  }
- })
-  
- ###Quality Warnings
- output$quality_gold_errors <- renderText({
-  if (input$get_job == 0 || input$job_id == 0) {
-     return("<p>Waiting to pull builder_units.</p>")
-  } else {
-    #Data to Grab
-    #json = get_job_settings_from_json()
-    units = pull_unit_data()
-    #gold answers - grab values per cml_name
-    print("Did you make it here? 1186")
-    enabled_golds = units[units$state == 6,]
-    print("ENABLED GOLDS")
-    print(enabled_golds)
-    
-    disabled_golds = units[units$state == 7,]
-    print("DISABLED GOLDS")
-    print(disabled_golds)
-     
-    num_units = nrow(units)
-    num_golds = nrow(enabled_golds)
-    
-    if(num_golds != 0){
-      enabled_golds$missed_percent = enabled_golds$missed_count/enabled_golds$judgments_count
-      enabled_golds$contested_percent = enabled_golds$contested_count/enabled_golds$missed_count
-      
-      highly_missed = enabled_golds[enabled_golds$missed_percent > .67,]
-      highly_contested = enabled_golds[enabled_golds$contested_percent > .50,]
-      
-      num_missed = nrow(enabled_golds[enabled_golds$missed_count > 0,])
-      
-      #More than 19% of golds are missed +67% of the time
-      if(nrow(highly_missed)/num_golds > .19){
-        tq_missed_message = "<p><i class=\"icon-edit\"></i><u>Highly Missed TQ's</u>: There are quite a few test questions that are highly missed. 
-        We would update those before digging into Quality too much.</p>"
       } else {
-        tq_missed_message = ""
+        paste("<div class=\"alert\">", "<p><big>Throughput Contributor Cautions:</big></p>",
+              viable_message, lookers_message, dont_care_message, "</div>")
       }
-     
-      #More than 19% of golds are contested +50% of the time
-      if(nrow(highly_contested)/num_missed > .19){
-        tq_contested_message = "<p><i class=\"icon-edit\"></i><u>Highly Contested TQ's</u>: There are quite a few missed test questions that are highly contested.</p>"
-      } else{
-        tq_contested_message = "" 
-      }
- 
-      #Enough Golds
-      #wrt number of units for every 100 units there should be AT LEAST 10 units.
-      if(num_golds/num_units < .11 && num_golds < 100){
-      enough_golds_message = "<p><i class=\"icon-list-alt\"></i><u>Too Few TQs</u>: Careful. There are very few golds given the number of units. 
+    }
+  })
+  
+  ###Quality Warnings
+  output$quality_gold_errors <- renderText({
+    if (input$get_job == 0 || input$job_id == 0) {
+      return("<p>Waiting to pull builder_units.</p>")
+    } else {
+      #Data to Grab
+      #json = get_job_settings_from_json()
+      units = pull_unit_data()
+      #gold answers - grab values per cml_name
+      print("Did you make it here? 1186")
+      enabled_golds = units[units$state == 6,]
+      print("ENABLED GOLDS")
+      print(enabled_golds)
+      
+      disabled_golds = units[units$state == 7,]
+      print("DISABLED GOLDS")
+      print(disabled_golds)
+      
+      num_units = nrow(units)
+      num_golds = nrow(enabled_golds)
+      
+      if(num_golds != 0){
+        enabled_golds$missed_percent = enabled_golds$missed_count/enabled_golds$judgments_count
+        enabled_golds$contested_percent = enabled_golds$contested_count/enabled_golds$missed_count
+        
+        highly_missed = enabled_golds[enabled_golds$missed_percent > .67,]
+        highly_contested = enabled_golds[enabled_golds$contested_percent > .50,]
+        
+        num_missed = nrow(enabled_golds[enabled_golds$missed_count > 0,])
+        
+        #More than 19% of golds are missed +67% of the time
+        if(nrow(highly_missed)/num_golds > .19){
+          tq_missed_message = "<p><i class=\"icon-edit\"></i><u>Highly Missed TQ's</u>: There are quite a few test questions that are highly missed. 
+        We would update those before digging into Quality too much.</p>"
+        } else {
+          tq_missed_message = ""
+        }
+        
+        #More than 19% of golds are contested +50% of the time
+        if(nrow(highly_contested)/num_missed > .19){
+          tq_contested_message = "<p><i class=\"icon-edit\"></i><u>Highly Contested TQ's</u>: There are quite a few missed test questions that are highly contested.</p>"
+        } else{
+          tq_contested_message = "" 
+        }
+        
+        #Enough Golds
+        #wrt number of units for every 100 units there should be AT LEAST 10 units.
+        if(num_golds/num_units < .11 && num_golds < 100){
+          enough_golds_message = "<p><i class=\"icon-list-alt\"></i><u>Too Few TQs</u>: Careful. There are very few golds given the number of units. 
         You may want to increase it.</p>"
         } else {
           enough_golds_message = ""
@@ -1280,8 +1256,8 @@ shinyServer(function(input, output){
     i = 4
     j = 5
     
-      if(i < j){
-        times_message ="<p><i class=\"icon-time\"></i><u>Speed Demons Warning</u>: Caution, we've detected some speed demons in this task. 
+    if(i < j){
+      times_message ="<p><i class=\"icon-time\"></i><u>Speed Demons Warning</u>: Caution, we've detected some speed demons in this task. 
         You may want to take a look at them and update Speed Limit Settings when needed.</p>"
     } else{
       times_message =""
@@ -1564,10 +1540,8 @@ shinyServer(function(input, output){
       #print("in pull_speed_violations")
       db = db_call
       query = velocity_violations_query(job_id)
-      file = paste0(temp_dir,"/",
-                    "speed_violations", "_", job_id, "_",
-                    format(Sys.time(), "%b_%d_%X_%Y"),
-                    ".csv")
+      file = tempfile(tmpdir=temp_dir, fileext=".csv", pattern="speed_violations_")
+      
       data = run_this_query(db, query, file)
       #print("Workset server Line 772")
       #print(names(data))
@@ -1717,6 +1691,7 @@ shinyServer(function(input, output){
       h1$plotOptions(
         series = list(
           cursor = 'pointer',
+          pointWidth = 300,
           events = list(
             click = 
               "#! function() { window.open(this.point.click_action); } !#"
